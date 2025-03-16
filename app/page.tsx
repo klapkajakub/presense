@@ -1,22 +1,28 @@
 "use client"
 
+import { RootLayout } from "@/components/layout/root-layout"
+import { Header } from "@/components/layout/header"
+import { Sidebar } from "@/components/layout/sidebar"
+import { ResizableChat } from "@/components/chat/resizable-chat"
 import { Button } from "@/components/ui/button"
 import { useModal } from "@/components/modals/modal-context"
 import { ChatButton } from "@/components/chat-button"
-import { ChatSheet } from "@/components/chat/chat-sheet"
 
 export default function Home() {
   const { openModal } = useModal()
 
   return (
-    <main className="relative min-h-screen">
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-8">
+    <RootLayout
+      header={<Header />}
+      sidebar={<Sidebar />}
+    >
+      <div className="flex flex-col items-center justify-center min-h-full p-8">
         <Button onClick={() => openModal('update-description')}>
           Open Description Modal
         </Button>
         <ChatButton />
       </div>
-      <ChatSheet />
-    </main>
+      <ResizableChat />
+    </RootLayout>
   )
 }

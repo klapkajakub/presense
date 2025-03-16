@@ -119,5 +119,18 @@
   }
   body {
     @apply bg-background text-foreground;
+    @apply overflow-x-hidden;
   }
+}
+
+.sheet-content {
+  z-index: 50;
+}
+
+.modal-content {
+  z-index: 100;
+}
+
+.button-wrapper {
+  z-index: 20;
 }

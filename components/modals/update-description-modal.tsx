@@ -1,161 +1,157 @@
 "use client"
 
-import { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from 'sonner';
-import { ModalContentProps } from './types';
-import { PlatformDescriptions } from "@/types/business";
-import { PLATFORM_CONFIGS } from '@/types/business';
+import { useState, useEffect } from 'react'
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { toast } from 'sonner'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog"
+import { useModal } from "./modal-context"
+import { useDescriptions } from "../descriptions/descriptions-context"
+import { PLATFORM_CONFIGS } from '@/types/business'
 
-export function UpdateDescriptionModal({ onClose }: ModalContentProps) {
-    const [descriptions, setDescriptions] = useState<PlatformDescriptions>({
-        google: '',
-        facebook: '',
-        firmy: '',
-        instagram: ''
-    });
-    const [isSaving, setIsSaving] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [improvingPlatform, setImprovingPlatform] = useState<string | null>(null);
+type Platform = keyof typeof PLATFORM_CONFIGS
 
-    useEffect(() => {
-        const loadDescriptions = async () => {
-            try {
-                setIsLoading(true);
-                const response = await fetch('/api/descriptions');
-                const data = await response.json();
+export function UpdateDescriptionModal() {
+  const { isOpen, type, closeModal } = useModal()
+  const { descriptions, updateDescription } = useDescriptions()
+  const open = isOpen && type === 'update-description'
+  
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [improvingPlatform, setImprovingPlatform] = useState<Platform | null>(null)
 
-                if (data.success) {
-                    setDescriptions(data.data);
-                } else {
-                    throw new Error('Failed to load descriptions');
-                }
-            } catch (error) {
-                console.error('Load error:', error);
-                toast.error('Failed to load descriptions');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        loadDescriptions();
-    }, []);
-
-    const handleImprove = async (platform: keyof PlatformDescriptions) => {
-        try {
-            setImprovingPlatform(platform);
-            const config = PLATFORM_CONFIGS[platform];
-
-            const response = await fetch('/api/improve', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    platform,
-                    text: descriptions[platform],
-                    maxLength: config.maxLength,
-                    context: config.description
-                }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok || !data.success) {
-                throw new Error(data.error || 'Failed to improve text');
-            }
-
-            // Validate improved text length
-            if (data.improvedText.length > config.maxLength) {
-                throw new Error(`Improved text exceeds ${config.maxLength} characters`);
-            }
-
-            setDescriptions(prev => ({
-                ...prev,
-                [platform]: data.improvedText
-            }));
-
-            toast.success(`${config.name} description improved`);
-        } catch (error) {
-            console.error('Improve error:', error);
-            toast.error(`Failed to improve ${PLATFORM_CONFIGS[platform].name} description`);
-        } finally {
-            setImprovingPlatform(null);
+  // Load descriptions on mount
+  useEffect(() => {
+    const loadDescriptions = async () => {
+      try {
+        setIsLoading(true)
+        const response = await fetch('/api/descriptions')
+        const data = await response.json()
+        
+        if (data.success) {
+          Object.entries(data.data).forEach(([platform, content]) => {
+            updateDescription(platform as Platform, content as string)
+          })
         }
-    };
+      } catch (error) {
+        console.error('Failed to load descriptions:', error)
+        toast.error('Failed to load descriptions')
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-    const handleSave = async () => {
-        try {
-            setIsSaving(true);
-            const response = await fetch('/api/descriptions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ descriptions }),
-            });
+    if (open) {
+      loadDescriptions()
+    }
+  }, [open, updateDescription])
 
-            if (!response.ok) throw new Error('Failed to save descriptions');
+  const handleSave = async () => {
+    try {
+      setIsSaving(true)
+      const response = await fetch('/api/descriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ descriptions })
+      })
 
-            toast.success('All descriptions saved successfully');
-            onClose();
-        } catch (error) {
-            console.error('Save error:', error);
-            toast.error('Failed to save descriptions');
-        } finally {
-            setIsSaving(false);
-        }
-    };
+      if (!response.ok) throw new Error('Failed to save descriptions')
+      
+      toast.success('Descriptions saved successfully')
+      closeModal()
+    } catch (error) {
+      console.error('Error saving descriptions:', error)
+      toast.error('Failed to save descriptions')
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
-    return (
+  const handleImprove = async (platform: Platform) => {
+    try {
+      setImprovingPlatform(platform)
+      
+      const response = await fetch('/api/improve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          platform,
+          currentText: descriptions[platform] || '',
+          maxLength: PLATFORM_CONFIGS[platform].maxLength
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Network response was not ok')
+      }
+
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to improve text')
+      }
+
+      // Validate improved text length
+      if (data.improvedText.length > PLATFORM_CONFIGS[platform].maxLength) {
+        throw new Error('Improved text exceeds maximum length')
+      }
+
+      updateDescription(platform, data.improvedText)
+      toast.success(`${PLATFORM_CONFIGS[platform].name} description improved`)
+
+    } catch (error) {
+      console.error('Error improving text:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to improve text')
+    } finally {
+      setImprovingPlatform(null)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={closeModal}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>Update Platform Descriptions</DialogTitle>
+        </DialogHeader>
         <div className="grid gap-6">
-            {Object.entries(descriptions).map(([platform, text]) => {
-                const config = PLATFORM_CONFIGS[platform];
-                return (
-                    <div key={platform} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h3 className="text-lg font-semibold">{config.name}</h3>
-                                <p className="text-sm text-muted-foreground">{config.description}</p>
-                            </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleImprove(platform as keyof PlatformDescriptions)}
-                                disabled={isLoading || improvingPlatform === platform || !text}
-                            >
-                                {improvingPlatform === platform ? "Improving..." : "Improve"}
-                            </Button>
-                        </div>
-                        <div className="space-y-1">
-                            <Textarea
-                                value={text}
-                                onChange={(e) => setDescriptions(prev => ({
-                                    ...prev,
-                                    [platform]: e.target.value
-                                }))}
-                                placeholder={`Enter ${config.name} description...`}
-                                disabled={isLoading || improvingPlatform === platform}
-                                className={text.length > config.maxLength ? 'border-red-500' : ''}
-                                rows={4}
-                            />
-                            <div className={`text-sm text-right ${text.length > config.maxLength
-                                ? 'text-red-500'
-                                : 'text-gray-500'
-                                }`}>
-                                {text.length}/{config.maxLength} characters
-                            </div>
-                        </div>
-                    </div>
-                );
-            })}
-            <div className="flex justify-end">
+          {Object.entries(PLATFORM_CONFIGS).map(([platform, config]) => (
+            <div key={platform} className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">{config.name}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {config.description}
+                  </p>
+                </div>
                 <Button
-                    onClick={handleSave}
-                    disabled={isSaving || isLoading}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleImprove(platform as Platform)}
+                  disabled={improvingPlatform === platform}
                 >
-                    {isLoading ? 'Loading...' : isSaving ? 'Saving...' : 'Save All'}
+                  {improvingPlatform === platform ? 'Improving...' : 'Improve'}
                 </Button>
+              </div>
+              <Textarea
+                value={descriptions[platform as Platform] || ''}
+                onChange={(e) => updateDescription(platform as Platform, e.target.value)}
+                placeholder={`Enter your ${config.name} description`}
+                className="min-h-[100px]"
+              />
+              <div className="text-xs text-muted-foreground">
+                {(descriptions[platform as Platform] || '').length} / {config.maxLength} characters
+              </div>
             </div>
+          ))}
         </div>
-    );
-};
-
-export default UpdateDescriptionModal;
+        <div className="flex justify-end mt-4">
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

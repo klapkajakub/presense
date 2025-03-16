@@ -16,15 +16,17 @@ const SheetContent = React.forwardRef<
   }
 >(({ side = "right", className, children, ...props }, ref) => (
   <SheetPortal>
+    <SheetOverlay className="pointer-events-none" />
     <SheetPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=open]:animate-in",
+        "fixed h-full bg-background",
+        "transition-all duration-300 ease-in-out",
         {
-          "inset-y-0 right-0 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right": side === "right",
-          "inset-x-0 top-0 data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top": side === "top",
-          "inset-x-0 bottom-0 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom": side === "bottom",
-          "inset-y-0 left-0 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left": side === "left",
+          "right-0": side === "right",
+          "inset-x-0 top-0": side === "top",
+          "inset-x-0 bottom-0": side === "bottom",
+          "left-0": side === "left",
         },
         className
       )}
@@ -44,7 +46,7 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50",
         className
       )}
       {...props}

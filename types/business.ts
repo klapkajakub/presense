@@ -1,14 +1,14 @@
-export interface PlatformDescriptions {
-        google: string;
-        facebook: string;
-        firmy: string;
-        instagram: string;
+export type PlatformDescriptions = {
+    gmb: string
+    fb: string
+    ig: string
 }
 
 export interface PlatformConfig {
-        maxLength: number;
-        name: string;
-        description: string;
+    name: string
+    description: string
+    maxLength: number
+    icon: string
 }
 
 export const PLATFORM_CONFIGS: Record<string, PlatformConfig> = {
