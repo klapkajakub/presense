@@ -1,96 +1,93 @@
 "use client"
 
-import { useState, useEffect } from 'react'
-import { useChat } from './chat-context'
-import { ChatView } from './chat-view'
-import { Bot, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
-import { IconContainer } from '../ui/icon-container'
-import { faBrain, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { useState } from "react"
+import { useChat } from "@/lib/hooks/use-chat"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { IconContainer } from "@/components/ui/icon-container"
+import { Textarea } from "@/components/ui/textarea"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Send } from "lucide-react"
+import { ChatMessage } from "./chat-message"
 
 export function ResizableChat() {
-  const { isOpen, width, setWidth, closeChat } = useChat()
-  const [isDragging, setIsDragging] = useState(false)
+  const { isOpen, width, setWidth, closeChat, messages, addMessage } = useChat()
+  const [input, setInput] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
-  useEffect(() => {
-    if (!isDragging) return
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return
 
-    const handleMouseMove = (e: MouseEvent) => {
-      e.preventDefault()
-      const newWidth = window.innerWidth - e.clientX
-      setWidth(newWidth)
+    try {
+      setIsLoading(true)
+      addMessage({ role: 'user', content: input })
+      setInput('')
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [...messages, { role: 'user', content: input }] })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        addMessage({ role: 'assistant', content: data.response })
+      }
+    } catch (error) {
+      console.error('Chat error:', error)
+    } finally {
+      setIsLoading(false)
     }
-
-    const handleMouseUp = () => {
-      setIsDragging(false)
-      document.body.style.cursor = ''
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-    document.body.style.cursor = 'ew-resize'
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = ''
-    }
-  }, [isDragging, setWidth])
+  }
 
   return (
-    <>
-      {isDragging && (
-        <div className="fixed inset-0 z-50" />
-      )}
-
-      <div 
-        className={cn(
-          "fixed top-0 h-full flex flex-col bg-background border-l border-border",
-          "transition-all duration-300 ease-in-out transform",
-          isOpen ? "translate-x-0" : "translate-x-full",
-          "z-40"
-        )}
-        style={{ 
-          width,
-          right: 0
-        }}
-      >
-        {/* Resize handle */}
-        <div
-          className="absolute left-0 top-0 w-4 h-full cursor-ew-resize hover:bg-sky-200/40 transition-colors z-50"
-          onMouseDown={(e) => {
-            e.preventDefault()
-            setIsDragging(true)
-          }}
-          style={{ transform: 'translateX(-50%)' }}
-        />
-
-        {/* Header */}
-        <header className="relative h-14 shrink-0 border-b border-border flex items-center justify-between px-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex items-center gap-2">
-            <IconContainer icon="fa-solid fa-robot" size="md" />
-            <span className="font-medium">Assistant</span>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={closeChat}
-            className="h-8 w-8"
-          >
-            <IconContainer 
-              icon="fa-solid fa-xmark" 
-              size="md" 
-              containerClassName="bg-transparent" 
-            />
-          </Button>
-        </header>
-
-        {/* Chat content */}
-        <div className="flex-1 overflow-auto">
-          <ChatView />
+    <div className={cn(
+      "fixed inset-y-0 right-0 flex flex-col bg-background border-l",
+      "transition-transform duration-300",
+      isOpen ? "translate-x-0" : "translate-x-full"
+    )}
+    style={{ width }}>
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center gap-2">
+          <IconContainer icon="fa-solid fa-robot" />
+          <span className="font-medium">AI Assistant</span>
         </div>
+        <Button variant="ghost" size="icon" onClick={closeChat}>
+          <IconContainer icon="fa-solid fa-xmark" />
+        </Button>
       </div>
-    </>
+
+      <ScrollArea className="flex-1 p-4">
+        <div className="space-y-4">
+          {messages.map((msg, i) => (
+            <ChatMessage key={i} {...msg} />
+          ))}
+        </div>
+      </ScrollArea>
+
+      <div className="p-4 border-t">
+        <form onSubmit={(e) => {
+          e.preventDefault()
+          handleSend()
+        }}
+        className="flex gap-2">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type your message..."
+            className="min-h-[80px]"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSend()
+              }
+            }}
+          />
+          <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
+      </div>
+    </div>
   )
 }

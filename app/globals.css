@@ -44,6 +44,10 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
@@ -120,6 +124,21 @@
   body {
     @apply bg-background text-foreground;
     @apply overflow-x-hidden;
+  }
+
+  .prose {
+    max-width: none;
+  }
+
+  .prose p {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+  }
+
+  .prose pre {
+    background-color: hsl(var(--muted));
+    padding: 1rem;
+    border-radius: var(--radius);
   }
 }
 
