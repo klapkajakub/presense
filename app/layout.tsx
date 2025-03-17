@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google"
 import Script from "next/script"
 import "./globals.css"
 import { Providers } from '@/components/providers'
+import { CommandMenu } from "@/components/command-menu"
+import { ChatButton } from "@/components/chat-button"
 import { cn } from "@/lib/utils"
 
 const geistSans = Geist({
@@ -40,6 +42,8 @@ export default function RootLayout({
       <body>
         <Providers>
           {children}
+          <ChatButton />
+          <CommandMenu />
         </Providers>
       </body>
     </html>
