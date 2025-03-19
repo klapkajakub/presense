@@ -2,10 +2,8 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import Script from "next/script"
 import "./globals.css"
-import { Providers } from '@/components/providers'
-import { CommandMenu } from "@/components/command-menu"
-import { ChatButton } from "@/components/chat-button"
 import { cn } from "@/lib/utils"
+import { ClientLayout } from "@/components/layout/client-layout"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,9 +26,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={cn(
+    <html lang="en" suppressHydrationWarning className={cn(
       geistSans.variable, 
-      geistMono.variable
+      geistMono.variable,
+      "antialiased"
     )}>
       <head>
         <Script 
@@ -39,12 +38,10 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
       </head>
-      <body>
-        <Providers>
+      <body className="min-h-screen bg-background font-sans">
+        <ClientLayout>
           {children}
-          <ChatButton />
-          <CommandMenu />
-        </Providers>
+        </ClientLayout>
       </body>
     </html>
   )

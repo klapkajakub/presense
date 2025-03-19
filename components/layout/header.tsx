@@ -1,18 +1,34 @@
-import { IconContainer } from "@/components/ui/icon-container"
+"use client"
+
+import { usePathname } from "next/navigation"
 
 export function Header() {
+  const pathname = usePathname()
+  const title = getTitle(pathname)
+
   return (
-    <div className="h-full flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <h1 className="font-semibold">Dashboard</h1>
-      </div>
+    <div className="flex h-14 items-center justify-between px-6">
       <div className="flex items-center gap-2">
-        <div className="text-sm text-muted-foreground">
-          Press <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100">
-            <span className="text-xs">⌘</span>K
-          </kbd> to open command menu
-        </div>
+        <h1 className="text-lg font-semibold">{title}</h1>
+      </div>
+      <div className="text-sm text-muted-foreground">
+        Press <kbd className="pointer-events-none ml-1 select-none rounded border px-1.5 font-mono text-[10px] font-medium opacity-100">⌘</kbd> <kbd className="pointer-events-none select-none rounded border px-1.5 font-mono text-[10px] font-medium opacity-100">K</kbd> to open command menu
       </div>
     </div>
   )
+}
+
+function getTitle(pathname: string): string {
+  switch (pathname) {
+    case '/':
+      return 'Dashboard'
+    case '/business':
+      return 'Business'
+    case '/team':
+      return 'Team'
+    case '/settings':
+      return 'Settings'
+    default:
+      return 'Dashboard'
+  }
 }

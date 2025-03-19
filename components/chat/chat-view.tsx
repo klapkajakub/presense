@@ -9,16 +9,13 @@ import { Send, Copy, User2, Bot, Check, Volume2, VolumeX } from "lucide-react"
 import { cn } from "@/lib/utils"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { useModal } from "@/components/modals/modal-context" // Add this import
-import { IconContainer } from "@/components/ui/icon-container" // Add this if not already imported
+import { useModal } from "@/components/modals/modal-context"
+import { IconContainer } from "@/components/ui/icon-container"
 import { useDescriptions } from "@/components/descriptions/descriptions-context"
 import { ChatAction } from "./chat-action"
 import { Message } from "@/types/chat"
-
-type Message = {
-    role: 'user' | 'assistant'
-    content: string
-}
+import { parseCommandOutput } from "@/lib/chat/message-parser"
+import { useSession } from "next-auth/react"
 
 const MarkdownComponents = {
     pre: ({ children }: { children: React.ReactNode }) => (
@@ -132,45 +129,8 @@ function MessageCommand({ commands, outputs }: {
   );
 }
 
-function parseMessage(content: string) {
-  const commandRegex = /\[command name="([^"]+)"\]/g;
-  const outputRegex = /\[output type="([^"]+)" content="([^"]+)"\]/g;
-  
-  // Extract the main message (everything before first command/output)
-  let messageContent = content;
-  const firstCommand = content.indexOf('[command');
-  const firstOutput = content.indexOf('[output');
-  const firstIndex = Math.min(
-    firstCommand > -1 ? firstCommand : Infinity,
-    firstOutput > -1 ? firstOutput : Infinity
-  );
-  
-  if (firstIndex !== Infinity) {
-    messageContent = content.substring(0, firstIndex).trim();
-  }
-
-  // Parse commands
-  const commands: { name: string }[] = [];
-  let cmdMatch;
-  while ((cmdMatch = commandRegex.exec(content)) !== null) {
-    commands.push({ name: cmdMatch[1] });
-  }
-
-  // Parse outputs
-  const outputs: { type: string, content: string }[] = [];
-  let outMatch;
-  while ((outMatch = outputRegex.exec(content)) !== null) {
-    outputs.push({
-      type: outMatch[1],
-      content: outMatch[2]
-    });
-  }
-
-  return { messageContent, commands, outputs };
-}
-
 function MessageContent({ content, role }: { content: string; role: Message['role'] }) {
-  const { messageContent, commands, outputs } = parseMessage(content);
+  const { messageContent, commands, outputs } = parseCommandOutput(content);
 
   return (
     <div className="space-y-2">
@@ -196,6 +156,7 @@ function MessageContent({ content, role }: { content: string; role: Message['rol
 function MessageBubble({ message, isLoading }: { message: Message, isLoading?: boolean }) {
   const [copied, setCopied] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const { data: session } = useSession()
   
   const handleCopy = async () => {
     try {
@@ -226,8 +187,10 @@ function MessageBubble({ message, isLoading }: { message: Message, isLoading?: b
         message.role === 'user' ? "justify-end" : "justify-start"
       )}>
         {message.role === 'assistant' && (
-          <Avatar className="h-8 w-8">
-            <AvatarFallback><Bot className="h-4 w-4" /></AvatarFallback>
+          <Avatar className="h-10 w-10 bg-primary/10">
+            <AvatarFallback>
+              <Bot className="h-5 w-5 text-primary" />
+            </AvatarFallback>
           </Avatar>
         )}
         <div className="flex flex-col">
@@ -239,7 +202,6 @@ function MessageBubble({ message, isLoading }: { message: Message, isLoading?: b
           )}>
             <MessageContent content={message.content} role={message.role} />
           </div>
-          {/* Action buttons for copy/speak */}
           {message.role === 'assistant' && !isLoading && (
             <div className="mt-1 flex items-center gap-1">
               <Button
@@ -270,8 +232,17 @@ function MessageBubble({ message, isLoading }: { message: Message, isLoading?: b
           )}
         </div>
         {message.role === 'user' && (
-          <Avatar className="h-8 w-8">
-            <AvatarFallback><User2 className="h-4 w-4" /></AvatarFallback>
+          <Avatar className="h-10 w-10">
+            <AvatarImage 
+              src={session?.user?.avatar || ''} 
+              alt="User avatar"
+              onError={(e) => {
+                console.error('Avatar load error:', e)
+                const img = e.target as HTMLImageElement
+                console.log('Failed avatar URL:', img.src)
+              }}
+            />
+            <AvatarFallback><User2 className="h-5 w-5" /></AvatarFallback>
           </Avatar>
         )}
       </div>
@@ -284,8 +255,8 @@ function MessageBubble({ message, isLoading }: { message: Message, isLoading?: b
 function LoadingMessage() {
     return (
         <div className="flex gap-3">
-            <Avatar className="h-8 w-8">
-                <AvatarFallback><Bot className="h-4 w-4" /></AvatarFallback>
+            <Avatar className="h-10 w-10">
+                <AvatarFallback><Bot className="h-5 w-5" /></AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
                 <div className="rounded-lg px-4 py-2 bg-muted">

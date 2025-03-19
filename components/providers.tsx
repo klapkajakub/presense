@@ -13,6 +13,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       defaultTheme="system" 
       enableSystem
       disableTransitionOnChange
+      storageKey="presense-theme"
     >
       <ModalProvider>
         <ChatProvider>

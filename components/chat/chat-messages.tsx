@@ -1,22 +1,33 @@
-import { useChat } from "@/lib/hooks/use-chat"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { ChatMessage } from "./chat-message"
+"use client"
 
-export function ChatMessages() {
-  const { messages } = useChat()
+import { useEffect, useRef } from "react"
+import { ChatMessage } from "./chat-message"
+import { Message } from "@/types/chat"
+
+interface ChatMessagesProps {
+  messages: Message[]
+  highlight?: string
+}
+
+export function ChatMessages({ messages, highlight }: ChatMessagesProps) {
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   return (
-    <ScrollArea className="flex-1">
-      <div className="flex-1 p-4 space-y-4">
-        {messages.map((message, index) => (
-          <ChatMessage
-            key={index}
-            role={message.role}
-            content={message.content}
-            isCommand={message.content.includes('***')}
-          />
-        ))}
-      </div>
-    </ScrollArea>
+    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {messages.map((message, index) => (
+        <ChatMessage
+          key={`${message.role}-${index}`}
+          messageId={`${message.role}-${index}`}
+          role={message.role}
+          content={message.content}
+          highlight={highlight}
+        />
+      ))}
+      <div ref={bottomRef} />
+    </div>
   )
 }
