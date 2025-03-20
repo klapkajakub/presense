@@ -3,23 +3,17 @@
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Building2, Home, Settings, Users } from "lucide-react"
+import { LayoutDashboard, Settings, Users } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { UserMenu } from "@/components/user-menu"
 
 const routes = [
   {
-    label: 'Home',
-    icon: Home,
+    label: 'Dashboard',
+    icon: LayoutDashboard,
     href: '/',
     color: 'text-sky-500'
-  },
-  {
-    label: 'Business',
-    icon: Building2,
-    href: '/business',
-    color: 'text-violet-500',
   },
   {
     label: 'Team',

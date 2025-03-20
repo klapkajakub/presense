@@ -1,26 +1,24 @@
 "use client"
 
-import { useSession } from "next-auth/react"
+import { useAuth } from '@/lib/contexts/auth-context'
 import { useChat } from "@/lib/hooks/use-chat"
 import { Button } from "@/components/ui/button"
 import { MessageCircle } from "lucide-react"
 
 export function ChatButton() {
-  const { toggleChat, isOpen } = useChat()
-  const { data: session } = useSession()
+  const { user } = useAuth()
+  const { toggleChat } = useChat()
 
-  if (!session) {
-    return null
-  }
+  if (!user) return null
 
   return (
     <Button
-      onClick={toggleChat}
+      variant="ghost"
       size="icon"
+      onClick={toggleChat}
       className="fixed bottom-4 right-4 h-12 w-12 rounded-full shadow-lg"
     >
       <MessageCircle className="h-6 w-6" />
-      <span className="sr-only">Toggle chat</span>
     </Button>
   )
 }

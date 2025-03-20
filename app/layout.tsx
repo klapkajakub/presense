@@ -4,6 +4,7 @@ import Script from "next/script"
 import "./globals.css"
 import { cn } from "@/lib/utils"
 import { ClientLayout } from "@/components/layout/client-layout"
+import { Providers } from "@/components/providers"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,9 +40,11 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-background font-sans">
-        <ClientLayout>
-          {children}
-        </ClientLayout>
+        <Providers>
+          <ClientLayout>
+            {children}
+          </ClientLayout>
+        </Providers>
       </body>
     </html>
   )

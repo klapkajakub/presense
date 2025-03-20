@@ -2,41 +2,26 @@
 
 import { usePathname } from 'next/navigation'
 import { MainLayout } from "@/components/layout/main-layout"
-import { UpdateDescriptionModal } from "@/components/modals/update-description-modal"
 import { ChatButton } from "@/components/chat-button"
 import { CommandMenu } from "@/components/command-menu"
 import { ResizableChat } from "@/components/chat/resizable-chat"
-import { TooltipProvider } from "@/components/ui/tooltip"
-import { Providers } from '@/components/providers'
-import { SessionProvider } from '@/components/providers/session-provider'
+import { useChat } from "@/lib/hooks/use-chat"
 
-interface ClientLayoutProps {
-  children: React.ReactNode
-}
-
-export function ClientLayout({ children }: ClientLayoutProps) {
+export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const isAuthPage = pathname?.startsWith('/auth')
+  const { isOpen } = useChat()
+  const isAuthPage = pathname === '/auth/signin' || pathname === '/auth/signup'
+
+  if (isAuthPage) {
+    return <>{children}</>
+  }
 
   return (
-    <SessionProvider>
-      <Providers>
-        <TooltipProvider>
-          {isAuthPage ? (
-            children
-          ) : (
-            <>
-              <MainLayout>
-                {children}
-              </MainLayout>
-              <UpdateDescriptionModal />
-              <ChatButton />
-              <CommandMenu />
-              <ResizableChat />
-            </>
-          )}
-        </TooltipProvider>
-      </Providers>
-    </SessionProvider>
+    <MainLayout>
+      {children}
+      <ChatButton />
+      <CommandMenu />
+      {isOpen && <ResizableChat />}
+    </MainLayout>
   )
 } 

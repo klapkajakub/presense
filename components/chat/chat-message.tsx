@@ -8,10 +8,12 @@ import { Bot, Check, Copy, User2, Volume2, VolumeX } from "lucide-react"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useModal } from "@/components/modals/modal-context"
-import { useDescriptions } from "@/components/descriptions/descriptions-context"
+import { useBusiness } from "@/components/business/business-context"
 import { parseMessage } from "@/lib/chat/message-parser"
 import type { Components } from 'react-markdown'
-import { useSession } from "next-auth/react"
+import { useAuth } from '@/lib/contexts/auth-context'
+import { Message } from 'ai'
+import { UserAvatar } from '@/components/user-avatar'
 
 interface CodeProps extends React.HTMLAttributes<HTMLElement> {
   inline?: boolean
@@ -45,29 +47,19 @@ const MarkdownComponents: Components = {
 }
 
 interface ChatMessageProps {
-  role: 'user' | 'assistant' | 'system'
-  content: string
-  highlight?: string
-  messageId: string
+  message: Message
 }
 
-export function ChatMessage({ role, content, highlight, messageId }: ChatMessageProps) {
+export function ChatMessage({ message }: ChatMessageProps) {
+  const { user } = useAuth()
+  const isUser = message.role === 'user'
   const [copied, setCopied] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const { openModal } = useModal()
-  const { updateDescription } = useDescriptions()
-  const { data: session } = useSession()
-
-  // Debug session data
-  useEffect(() => {
-    if (role === 'user') {
-      console.log('Session data:', session)
-      console.log('User avatar:', session?.user?.avatar)
-    }
-  }, [session, role])
+  const { updateDescription } = useBusiness()
 
   // Extract commands from content
-  const { mainContent, commands } = parseMessage(content)
+  const { mainContent, commands } = parseMessage(message.content)
 
   // Execute commands only once and persist execution state
   useEffect(() => {
@@ -77,7 +69,7 @@ export function ChatMessage({ role, content, highlight, messageId }: ChatMessage
       
       for (const cmd of commands) {
         // Create a unique key for this command using messageId
-        const cmdKey = `${messageId}-${cmd.command}-${cmd.platform || ''}-${cmd.text || ''}`
+        const cmdKey = `${message.id}-${cmd.command}-${cmd.platform || ''}-${cmd.text || ''}`
         
         // Skip if already executed
         if (executedCommands[cmdKey]) continue
@@ -88,11 +80,11 @@ export function ChatMessage({ role, content, highlight, messageId }: ChatMessage
         
         switch (cmd.command) {
           case 'open-description':
-            openModal('update-description')
+            openModal('business-description')
             break
           case 'save-description':
             if (cmd.platform && cmd.text) {
-              await updateDescription(cmd.platform, cmd.text)
+              await updateDescription(cmd.text)
             }
             break
         }
@@ -100,7 +92,7 @@ export function ChatMessage({ role, content, highlight, messageId }: ChatMessage
     }
 
     executeCommands()
-  }, [commands, openModal, updateDescription, messageId])
+  }, [commands, openModal, updateDescription, message.id])
 
   // Handle copy function
   const handleCopy = async () => {
@@ -128,39 +120,35 @@ export function ChatMessage({ role, content, highlight, messageId }: ChatMessage
 
   // Highlight matching text if search is active
   const highlightText = (text: string) => {
-    if (!highlight) return text
+    if (!message.highlight) return text
 
-    const parts = text.split(new RegExp(`(${highlight})`, 'gi'))
+    const parts = text.split(new RegExp(`(${message.highlight})`, 'gi'))
     return parts.map((part, i) => 
-      part.toLowerCase() === highlight.toLowerCase() ? 
+      part.toLowerCase() === message.highlight.toLowerCase() ? 
         <span key={i} className="bg-yellow-200 dark:bg-yellow-900">{part}</span> : 
         part
     )
   }
 
   return (
-    <div className={cn(
-      "group flex gap-3 items-start",
-      role === 'user' ? "justify-end" : "justify-start"
-    )}>
-      {role === 'assistant' && (
-        <Avatar className="h-8 w-8">
-          <AvatarFallback>
-            <Bot className="h-4 w-4" />
-          </AvatarFallback>
-        </Avatar>
+    <div
+      className={cn(
+        'flex w-full items-start gap-4 p-4',
+        isUser ? 'bg-muted/50' : 'bg-background'
       )}
-      
-      <div className={cn(
-        "flex flex-col gap-2",
-        role === 'user' ? "items-end" : "items-start",
-        "max-w-[80%]"
-      )}>
-        <div className={cn(
-          "rounded-lg px-4 py-2",
-          role === 'user' ? "bg-primary text-primary-foreground" : "bg-muted"
-        )}>
-          {role === 'user' ? (
+    >
+      <div className="flex-shrink-0">
+        {isUser ? (
+          <UserAvatar user={user!} size="sm" />
+        ) : (
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            AI
+          </div>
+        )}
+      </div>
+      <div className="flex-1 space-y-2">
+        <div className="prose prose-sm dark:prose-invert">
+          {isUser ? (
             <div className="whitespace-pre-wrap">{highlightText(mainContent)}</div>
           ) : (
             <div className="prose prose-sm dark:prose-invert max-w-none">
@@ -201,7 +189,7 @@ export function ChatMessage({ role, content, highlight, messageId }: ChatMessage
           </div>
         ))}
 
-        {role === 'assistant' && (
+        {isUser && (
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button variant="ghost" size="icon" onClick={handleCopy}>
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -212,23 +200,6 @@ export function ChatMessage({ role, content, highlight, messageId }: ChatMessage
           </div>
         )}
       </div>
-
-      {role === 'user' && (
-        <Avatar className="h-8 w-8">
-          <AvatarImage 
-            src={session?.user?.avatar || ''} 
-            alt="User avatar"
-            onError={(e) => {
-              console.error('Avatar load error:', e)
-              const img = e.target as HTMLImageElement
-              console.log('Failed avatar URL:', img.src)
-            }}
-          />
-          <AvatarFallback>
-            <User2 className="h-4 w-4" />
-          </AvatarFallback>
-        </Avatar>
-      )}
     </div>
   )
 }

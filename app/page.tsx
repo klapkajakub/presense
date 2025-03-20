@@ -1,32 +1,30 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { useModal } from "@/components/modals/modal-context"
-import { ResizableChat } from "@/components/chat/resizable-chat"
+import { BusinessProvider } from "@/components/business/business-context"
+import { BusinessDescriptionWidget } from "@/components/business/business-description-widget"
+import { BusinessHoursWidget } from "@/components/business/business-hours-widget"
+import { PlatformConnectionsWidget } from "@/components/business/platform-connections-widget"
 
-export default function Home() {
-  const { openModal } = useModal()
-
+export default function HomePage() {
   return (
-    <>
+    <BusinessProvider>
       <div className="flex flex-col gap-8 p-6">
-        <div className="flex flex-col gap-4">
-          <div className="space-y-1">
-            <h2 className="text-2xl font-semibold tracking-tight">
-              Welcome back
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Manage your business content across multiple platforms
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={() => openModal('update-description')}>
-              Update Descriptions
-            </Button>
-          </div>
+        <div className="space-y-1">
+          <h2 className="text-2xl font-semibold tracking-tight">
+            Dashboard
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Manage your business information and platform-specific content
+          </p>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <BusinessDescriptionWidget />
+          <BusinessHoursWidget />
+        </div>
+        <div className="grid gap-6">
+          <PlatformConnectionsWidget />
         </div>
       </div>
-      <ResizableChat />
-    </>
+    </BusinessProvider>
   )
 }

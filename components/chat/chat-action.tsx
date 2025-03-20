@@ -1,57 +1,47 @@
 "use client"
 
+import { useModal } from "@/components/modals/modal-context"
+import { useBusiness } from "@/components/business/business-context"
 import { Button } from "@/components/ui/button"
 import { IconContainer } from "@/components/ui/icon-container"
-import { useModal } from "@/components/modals/modal-context"
-import { useDescriptions } from "@/components/descriptions/descriptions-context"
-import { PLATFORM_CONFIGS } from "@/types/business"
-import { toast } from "sonner"
 
 interface ChatActionProps {
   command: string
+  platform?: string
   content?: string
-  platform?: keyof typeof PLATFORM_CONFIGS
 }
 
-export function ChatAction({ command, content, platform }: ChatActionProps) {
+export function ChatAction({ command, platform, content }: ChatActionProps) {
   const { openModal } = useModal()
-  const { updateDescription } = useDescriptions()
+  const { updateDescription } = useBusiness()
 
   const handleAction = async () => {
     switch (command) {
       case 'open-description':
-        openModal('update-description')
+        openModal('business-description')
         break
       case 'save-description':
-        if (platform && content) {
-          try {
-            await updateDescription(platform, content)
-            const response = await fetch('/api/descriptions', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                descriptions: { [platform]: content }
-              })
-            })
-            
-            if (!response.ok) throw new Error('Failed to save description')
-            toast.success(`${PLATFORM_CONFIGS[platform].name} description updated`)
-          } catch (error) {
-            toast.error('Failed to save description')
-          }
+        if (content) {
+          await updateDescription(content)
         }
         break
     }
   }
 
   return (
-    <Button
-      variant="outline"
-      className="w-full flex items-center gap-2 bg-background"
-      onClick={handleAction}
-    >
-      <IconContainer icon="fa-solid fa-terminal" size="sm" />
-      <span>Execute: {command}</span>
-    </Button>
+    <div className="flex items-start gap-3">
+      <div className="flex-1">
+        <div className="rounded-lg px-4 py-2 bg-background border flex items-center gap-2">
+          <IconContainer 
+            icon="fa-solid fa-terminal" 
+            size="sm"
+            containerClassName="bg-primary/5" 
+          />
+          <span className="text-sm text-muted-foreground">
+            {command === 'open-description' ? 'Opening business description editor...' : 'Saving business description...'}
+          </span>
+        </div>
+      </div>
+    </div>
   )
 }

@@ -24,15 +24,15 @@ import {
   Bot
 } from "lucide-react"
 import { ChatMessage } from "./chat-message"
-import { useSession } from "next-auth/react"
+import { useAuth } from '@/lib/contexts/auth-context'
 import { ChatView } from "./chat-view"
 
 const MIN_WIDTH = 400
 const MAX_WIDTH = 800
 
 export function ResizableChat() {
+  const { user } = useAuth()
   const { isOpen, width, setWidth, closeChat, messages, addMessage, toggleChat } = useChat()
-  const { data: session } = useSession()
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -188,9 +188,7 @@ export function ResizableChat() {
     }
   }
 
-  if (!session) {
-    return null
-  }
+  if (!user) return null
 
   if (!isOpen) {
     return null

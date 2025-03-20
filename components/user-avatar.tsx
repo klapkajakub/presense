@@ -1,10 +1,13 @@
 "use client"
 
-import { useSession } from "next-auth/react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { User } from "lucide-react"
 
 interface UserAvatarProps {
+  user: {
+    id: string
+    email: string
+  }
   className?: string
   size?: "sm" | "md" | "lg"
 }
@@ -15,14 +18,14 @@ const sizeClasses = {
   lg: "h-12 w-12"
 }
 
-export function UserAvatar({ className, size = "md" }: UserAvatarProps) {
-  const { data: session } = useSession()
+export function UserAvatar({ user, className, size = "md" }: UserAvatarProps) {
+  const initials = user.email.split('@')[0].slice(0, 2).toUpperCase()
 
   return (
-    <Avatar className={sizeClasses[size]}>
-      <AvatarImage src={session?.user?.avatar} alt="User avatar" />
+    <Avatar className={`${sizeClasses[size]} ${className || ''}`}>
+      <AvatarImage src={`https://avatar.vercel.sh/${user.email}`} alt={user.email} />
       <AvatarFallback>
-        <User className="h-5 w-5" />
+        {initials}
       </AvatarFallback>
     </Avatar>
   )

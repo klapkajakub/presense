@@ -1,10 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useChat } from "@/lib/hooks/use-chat"
-import { useModal } from "@/components/modals/modal-context"
+import { useAuth } from '@/lib/contexts/auth-context'
 import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
+import { useEffect, useState } from "react"
 import {
   CommandDialog,
   CommandEmpty,
@@ -13,14 +11,11 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
-import { MessageCircle, FileEdit, Settings } from "lucide-react"
 
 export function CommandMenu() {
-  const [open, setOpen] = useState(false)
-  const { openModal } = useModal()
-  const { toggleChat, isOpen } = useChat()
+  const { user } = useAuth()
   const router = useRouter()
-  const { data: session } = useSession()
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -28,48 +23,35 @@ export function CommandMenu() {
         e.preventDefault()
         setOpen((open) => !open)
       }
-      // Change from Command+A to Command+P
-      if (e.key.toLowerCase() === "p" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault()
-        toggleChat()
-      }
     }
+
     document.addEventListener("keydown", down)
     return () => document.removeEventListener("keydown", down)
-  }, [toggleChat])
+  }, [])
 
-  if (!session) {
-    return null
-  }
-
-  const runCommand = (command: () => void) => {
-    setOpen(false)
-    command()
-  }
+  if (!user) return null
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Type a command or search..." />
+      <CommandInput />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
-        <CommandGroup heading="Actions">
+        <CommandGroup>
           <CommandItem
-            onSelect={() => runCommand(() => openModal("update-description"))}
+            onSelect={() => {
+              router.push("/dashboard")
+              setOpen(false)
+            }}
           >
-            <FileEdit className="mr-3 h-6 w-6" />
-            <span>Update Business Descriptions</span>
+            Dashboard
           </CommandItem>
           <CommandItem
-            onSelect={() => runCommand(() => toggleChat())}
+            onSelect={() => {
+              router.push("/settings")
+              setOpen(false)
+            }}
           >
-            <MessageCircle className="mr-3 h-6 w-6" />
-            <span>{isOpen ? 'Close AI Assistant' : 'Open AI Assistant'}</span>
-          </CommandItem>
-          <CommandItem
-            onSelect={() => runCommand(() => router.push('/settings'))}
-          >
-            <Settings className="mr-3 h-6 w-6" />
-            <span>Settings</span>
+            Settings
           </CommandItem>
         </CommandGroup>
       </CommandList>

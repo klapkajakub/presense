@@ -1,71 +1,47 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
-import { cn } from "@/lib/utils"
-import { Sidebar } from "./sidebar"
-import { Header } from "./header"
-import { useChat } from "@/lib/hooks/use-chat"
+import { useAuth } from '@/lib/contexts/auth-context'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+import { Sidebar } from "@/components/layout/sidebar"
+import { UserMenu } from "@/components/user-menu"
 
 interface MainLayoutProps {
   children: React.ReactNode
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { isOpen, width } = useChat()
-  const { data: session, status } = useSession()
+  const { user, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/login")
+    if (!isLoading && !user) {
+      router.push('/auth/signin')
     }
-  }, [status, router])
+  }, [user, isLoading, router])
 
-  if (status === "loading") {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    )
+  if (isLoading) {
+    return <div>Loading...</div>
   }
 
-  if (!session) {
+  if (!user) {
     return null
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <div className="hidden md:flex md:w-72 md:flex-col border-r border-border">
-        <Sidebar />
-      </div>
-
-      {/* Main Content Area */}
+    <div className="flex h-screen overflow-hidden bg-background">
+      <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <div 
-          className="border-b border-border"
-          style={{ 
-            marginRight: isOpen ? `${width}px` : 0,
-            transition: 'margin-right 300ms ease-in-out'
-          }}
-        >
-          <Header />
-        </div>
-
-        {/* Main Content */}
-        <main 
-          className="flex-1 relative overflow-y-auto"
-          style={{ 
-            marginRight: isOpen ? `${width}px` : 0,
-            transition: 'margin-right 300ms ease-in-out'
-          }}
-        >
-          <div className="h-full">
-            {children}
+        <header className="h-14 border-b border-border px-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-semibold">Presense</h1>
           </div>
+          <UserMenu />
+        </header>
+        <main 
+          className="flex-1 relative overflow-auto transition-[margin] duration-300 ease-in-out"
+        >
+          {children}
         </main>
       </div>
     </div>
