@@ -1,7 +1,6 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { getToken, removeToken, setToken } from '@/lib/auth'
 
 interface User {
   id: string
@@ -25,26 +24,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const token = getToken()
-    if (token) {
-      // Decode the JWT token to get user info
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]))
-        setUser({
-          id: payload.userId,
-          email: payload.email,
-        })
-      } catch (error) {
-        console.error('Error decoding token:', error)
-        removeToken()
-      }
-    }
-    setIsLoading(false)
+    // Check session on mount
+    fetch('/api/auth/session')
+      .then(res => res.json())
+      .then(data => {
+        if (data.user) {
+          setUser(data.user)
+        }
+      })
+      .catch(error => {
+        console.error('Error checking session:', error)
+      })
+      .finally(() => {
+        setIsLoading(false)
+      })
   }, [])
 
-  const signOut = () => {
-    removeToken()
-    setUser(null)
+  const signOut = async () => {
+    try {
+      await fetch('/api/auth/signout', { method: 'POST' })
+      setUser(null)
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
   }
 
   return (

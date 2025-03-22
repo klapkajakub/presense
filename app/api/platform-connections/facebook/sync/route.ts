@@ -1,29 +1,47 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { jwtVerify } from 'jose';
 import { connectDB } from '@/lib/db';
 import { PlatformConnection } from '@/models/PlatformConnection';
 import { BusinessHours } from '@/models/BusinessHours';
 import { syncFacebook } from '@/lib/platforms/sync';
 
-export async function POST() {
+const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+
+async function verifyAuth(request: Request) {
+  const token = request.headers.get('Authorization')?.split(' ')[1];
+  if (!token) {
+    return null;
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    const { payload } = await jwtVerify(token, secret);
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const payload = await verifyAuth(request);
+    if (!payload) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await connectDB();
 
     // Get the platform connection
     const connection = await PlatformConnection.findOne({
-      userId: session.user.id,
+      userId: payload.userId,
       platform: 'facebook',
       isActive: true
     });
 
     if (!connection) {
-      return new NextResponse('Facebook connection not found', { status: 404 });
+      return NextResponse.json(
+        { error: 'Facebook connection not found' },
+        { status: 404 }
+      );
     }
 
     // Get current business data
@@ -33,7 +51,10 @@ export async function POST() {
     ]);
 
     if (!hours || !business) {
-      return new NextResponse('Business data not found', { status: 404 });
+      return NextResponse.json(
+        { error: 'Business data not found' },
+        { status: 404 }
+      );
     }
 
     // Sync with Facebook
@@ -50,6 +71,6 @@ export async function POST() {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error syncing with Facebook:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

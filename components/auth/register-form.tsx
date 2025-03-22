@@ -4,8 +4,8 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { setToken } from '@/lib/auth'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -52,35 +52,27 @@ export function RegisterForm() {
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('/api/auth', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: values.username,
           email: values.email,
           password: values.password,
+          action: 'signup'
         }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || 'Something went wrong')
+        throw new Error(data.error || 'Failed to register')
       }
 
-      // Sign in the user after successful registration
-      const result = await signIn('credentials', {
-        email: values.email,
-        password: values.password,
-        redirect: false,
-      })
-
-      if (result?.error) {
-        throw new Error('Failed to sign in')
-      }
-
+      // Store the token
+      setToken(data.token)
+      
       router.push('/')
       router.refresh()
     } catch (error) {
@@ -103,7 +95,7 @@ export function RegisterForm() {
             <FormItem>
               <FormLabel>Username</FormLabel>
               <FormControl>
-                <Input placeholder="johndoe" {...field} />
+                <Input {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -116,7 +108,7 @@ export function RegisterForm() {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="name@example.com" {...field} />
+                <Input type="email" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -157,7 +149,7 @@ export function RegisterForm() {
           {isLoading && (
             <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
           )}
-          Create Account
+          Register
         </Button>
       </form>
     </Form>

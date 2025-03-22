@@ -4,8 +4,8 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { setToken } from '@/lib/auth'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -40,25 +40,31 @@ export function LoginForm() {
     setIsLoading(true)
 
     try {
-      const result = await signIn('credentials', {
-        email: values.email,
-        password: values.password,
-        redirect: false,
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: values.email,
+          password: values.password,
+          action: 'signin'
+        })
       })
 
-      if (result?.error) {
-        form.setError('root', { 
-          message: 'Invalid email or password' 
-        })
-        return
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to sign in')
       }
 
+      // Store the token
+      setToken(data.token)
+      
       router.push('/')
       router.refresh()
     } catch (error) {
       console.error('Login error:', error)
       form.setError('root', { 
-        message: 'Something went wrong. Please try again.' 
+        message: error instanceof Error ? error.message : 'Something went wrong' 
       })
     } finally {
       setIsLoading(false)

@@ -1,19 +1,34 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { jwtVerify } from 'jose';
 import { connectDB } from '@/lib/db';
 import { PlatformConnection } from '@/models/PlatformConnection';
 
-export async function GET() {
+const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+
+async function verifyAuth(request: Request) {
+  const token = request.headers.get('Authorization')?.split(' ')[1];
+  if (!token) {
+    return null;
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    const { payload } = await jwtVerify(token, secret);
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    const payload = await verifyAuth(request);
+    if (!payload) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await connectDB();
     const connections = await PlatformConnection.find({
-      userId: session.user.id,
+      userId: payload.userId,
       isActive: true
     }).select('platform lastSyncedAt');
 
@@ -26,7 +41,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error fetching platform connections:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 

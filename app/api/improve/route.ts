@@ -1,51 +1,69 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { openai } from '@/lib/openai';
+import { jwtVerify } from 'jose';
+import { connectDB } from '@/lib/db';
+import { OpenAI } from 'openai';
 
-export async function POST(req: Request) {
+const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+async function verifyAuth(request: Request) {
+    const token = request.headers.get('Authorization')?.split(' ')[1];
+    if (!token) {
+        return null;
+    }
+
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.email) {
-            return new NextResponse('Unauthorized', { status: 401 });
+        const { payload } = await jwtVerify(token, secret);
+        return payload;
+    } catch {
+        return null;
+    }
+}
+
+export async function POST(request: Request) {
+    try {
+        const payload = await verifyAuth(request);
+        if (!payload) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const body = await req.json();
-        const { currentText, maxLength, platform } = body;
+        const { text, platform } = await request.json();
 
-        if (!currentText) {
-            return new NextResponse('No text provided', { status: 400 });
+        if (!text || !platform) {
+            return NextResponse.json(
+                { error: 'Missing required fields' },
+                { status: 400 }
+            );
         }
-
-        const prompt = platform
-            ? `Improve the following business description for ${platform}. Make it more engaging and professional while staying within ${maxLength} characters. Focus on platform-specific best practices and tone:\n\n${currentText}`
-            : `Improve the following business description. Make it more engaging and professional while staying within ${maxLength} characters:\n\n${currentText}`;
 
         const completion = await openai.chat.completions.create({
-            model: "gpt-4-turbo-preview",
+            model: 'gpt-4',
             messages: [
                 {
-                    role: "system",
-                    content: "You are a professional business copywriter. Your task is to improve business descriptions while maintaining their core message and staying within character limits."
+                    role: 'system',
+                    content: `You are a helpful assistant that improves business descriptions for ${platform}. 
+                             Make the text more engaging and professional while maintaining the core message.
+                             Keep the tone consistent with the platform's style.`
                 },
                 {
-                    role: "user",
-                    content: prompt
+                    role: 'user',
+                    content: text
                 }
-            ],
-            temperature: 0.7,
-            max_tokens: 1000
+            ]
         });
 
-        const improvedText = completion.choices[0].message.content;
+        const improvedText = completion.choices[0]?.message?.content;
 
         if (!improvedText) {
-            return new NextResponse('Failed to generate improved text', { status: 500 });
+            return NextResponse.json(
+                { error: 'Failed to generate improved text' },
+                { status: 500 }
+            );
         }
 
-        return NextResponse.json({ improvedText });
+        return NextResponse.json({ text: improvedText });
     } catch (error) {
         console.error('Error improving text:', error);
-        return new NextResponse('Internal Server Error', { status: 500 });
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

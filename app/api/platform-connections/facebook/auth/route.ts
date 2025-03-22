@@ -1,18 +1,32 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { jwtVerify } from 'jose';
 import { connectDB } from '@/lib/db';
 import { PlatformConnection } from '@/models/PlatformConnection';
 
+const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 const FB_APP_ID = process.env.FACEBOOK_APP_ID;
 const FB_APP_SECRET = process.env.FACEBOOK_APP_SECRET;
 const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/api/platform-connections/facebook/callback`;
 
-export async function POST() {
+async function verifyAuth(request: Request) {
+  const token = request.headers.get('Authorization')?.split(' ')[1];
+  if (!token) {
+    return null;
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    const { payload } = await jwtVerify(token, secret);
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const payload = await verifyAuth(request);
+    if (!payload) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const scopes = [
@@ -26,12 +40,12 @@ export async function POST() {
       `client_id=${FB_APP_ID}` +
       `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
       `&scope=${encodeURIComponent(scopes.join(','))}` +
-      `&state=${session.user.id}`;
+      `&state=${payload.userId}`;
 
     return NextResponse.json({ authUrl });
   } catch (error) {
     console.error('Error generating Facebook auth URL:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 

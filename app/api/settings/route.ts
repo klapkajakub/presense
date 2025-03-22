@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { jwtVerify } from 'jose'
 import { getServerSession } from 'next-auth'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
@@ -8,42 +9,73 @@ import { authOptions } from '../auth/[...nextauth]/route'
 
 const UPLOAD_DIR = join(process.cwd(), 'public/uploads')
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
+const secret = new TextEncoder().encode(process.env.JWT_SECRET)
 
-export async function GET(req: Request) {
+async function verifyAuth(request: Request) {
+  const token = request.headers.get('Authorization')?.split(' ')[1]
+  if (!token) {
+    return null
+  }
+
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      console.error('No user ID in session:', session)
-      return NextResponse.json(
-        { message: 'Unauthorized' },
-        { status: 401 }
-      )
+    const { payload } = await jwtVerify(token, secret)
+    return payload
+  } catch {
+    return null
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    const payload = await verifyAuth(request)
+    if (!payload) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     await connectDB()
-    const user = await User.findById(session.user.id)
-
+    const user = await User.findById(payload.userId)
+    
     if (!user) {
-      console.error('User not found for ID:', session.user.id)
-      return NextResponse.json(
-        { message: 'User not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     return NextResponse.json({
-      username: user.username,
       email: user.email,
-      displayName: user.displayName,
-      bio: user.bio,
-      avatar: user.avatar?.url,
+      // Add other settings as needed
     })
   } catch (error) {
-    console.error('Error fetching user settings:', error)
-    return NextResponse.json(
-      { message: 'Internal server error' },
-      { status: 500 }
+    console.error('Error fetching settings:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const payload = await verifyAuth(request)
+    if (!payload) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    await connectDB()
+
+    const user = await User.findByIdAndUpdate(
+      payload.userId,
+      { $set: body },
+      { new: true }
     )
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({
+      email: user.email,
+      // Add other settings as needed
+    })
+  } catch (error) {
+    console.error('Error updating settings:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 

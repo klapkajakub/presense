@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/lib/contexts/auth-context'
 
 interface Settings {
   avatar?: string
@@ -19,16 +19,16 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const { data: session } = useSession()
+  const { user } = useAuth()
 
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        // Use session data for initial settings
-        if (session?.user) {
+        // Use user data for initial settings
+        if (user) {
           setSettings({
-            avatar: session.user.avatar || undefined,
-            // Add other settings from session if needed
+            avatar: undefined, // Add avatar handling if needed
+            // Add other settings from user if needed
           })
         }
         setIsLoading(false)
@@ -39,11 +39,19 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
 
     loadSettings()
-  }, [session])
+  }, [user])
 
   return (
     <SettingsContext.Provider value={{ settings, setSettings, isLoading }}>
       {children}
     </SettingsContext.Provider>
   )
+}
+
+export const useSettings = () => {
+  const context = useContext(SettingsContext)
+  if (context === undefined) {
+    throw new Error('useSettings must be used within a SettingsProvider')
+  }
+  return context
 } 
