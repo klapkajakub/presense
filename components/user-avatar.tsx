@@ -1,31 +1,61 @@
 "use client"
 
+import { AvatarProps } from "@radix-ui/react-avatar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useAuth } from "@/lib/contexts/auth-context"
 import { User } from "lucide-react"
 
-interface UserAvatarProps {
-  user: {
-    id: string
-    email: string
-  }
-  className?: string
+interface UserAvatarProps extends AvatarProps {
+  user?: {
+    image?: string | null
+    name?: string | null
+    email?: string | null
+  } | null
+  fallback?: React.ReactNode
   size?: "sm" | "md" | "lg"
 }
 
-const sizeClasses = {
-  sm: "h-8 w-8",
-  md: "h-10 w-10",
-  lg: "h-12 w-12"
-}
+export function UserAvatar({
+  user,
+  fallback,
+  size = "md",
+  ...props
+}: UserAvatarProps) {
+  const { user: authUser } = useAuth()
+  const currentUser = user || authUser
 
-export function UserAvatar({ user, className, size = "md" }: UserAvatarProps) {
-  const initials = user.email.split('@')[0].slice(0, 2).toUpperCase()
+  // Size classes mapping
+  const sizeClasses = {
+    sm: "h-8 w-8",
+    md: "h-10 w-10",
+    lg: "h-14 w-14"
+  }
+
+  // Get user initials for fallback
+  const getUserInitials = () => {
+    if (!currentUser?.name) return ""
+    
+    const nameParts = currentUser.name.split(" ")
+    if (nameParts.length === 1) {
+      return nameParts[0].substring(0, 2).toUpperCase()
+    }
+    
+    return `${nameParts[0].charAt(0)}${nameParts[1].charAt(0)}`.toUpperCase()
+  }
+
+  const initials = getUserInitials()
+  const defaultFallback = currentUser?.name ? initials : <User className="h-5 w-5" />
 
   return (
-    <Avatar className={`${sizeClasses[size]} ${className || ''}`}>
-      <AvatarImage src={`https://avatar.vercel.sh/${user.email}`} alt={user.email} />
+    <Avatar className={sizeClasses[size]} {...props}>
+      {currentUser?.image ? (
+        <AvatarImage
+          src={currentUser.image}
+          alt={`${currentUser.name || "User"}'s profile picture`}
+        />
+      ) : null}
       <AvatarFallback>
-        {initials}
+        {fallback || defaultFallback}
       </AvatarFallback>
     </Avatar>
   )

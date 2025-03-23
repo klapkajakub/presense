@@ -1,72 +1,64 @@
 import { NextResponse } from 'next/server'
-import { connectDB } from '@/lib/db'
-import { User } from '@/models/User'
-import * as z from 'zod'
+import bcrypt from 'bcryptjs'
+import { z } from 'zod'
+import { prisma } from '@/lib/db'
 
 const registerSchema = z.object({
-  username: z.string()
-    .min(3, 'Username must be at least 3 characters')
-    .max(20, 'Username must be less than 20 characters')
-    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers and underscores'),
+  name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  password: z.string()
-    .min(6, 'Password must be at least 6 characters')
-    .max(100, 'Password must be less than 100 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
 })
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json()
-    const { username, email, password } = registerSchema.parse(body)
-
-    await connectDB()
-
+    const body = await request.json()
+    
+    // Validate request body
+    const result = registerSchema.safeParse(body)
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error.errors[0].message }, 
+        { status: 400 }
+      )
+    }
+    
+    const { name, email, password } = body
+    
     // Check if user already exists
-    const existingUser = await User.findOne({
-      $or: [
-        { email: email.toLowerCase() },
-        { username: username.toLowerCase() }
-      ]
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
     })
-
+    
     if (existingUser) {
-      if (existingUser.email === email.toLowerCase()) {
-        return NextResponse.json(
-          { message: 'Email already registered' },
-          { status: 400 }
-        )
-      }
       return NextResponse.json(
-        { message: 'Username already taken' },
+        { error: 'User with this email already exists' }, 
         { status: 400 }
       )
     }
-
-    // Create new user
-    const user = new User({
-      username: username.toLowerCase(),
-      email: email.toLowerCase(),
-      password,
-      createdAt: new Date(),
-      lastLogin: new Date(),
+    
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10)
+    
+    // Create the user
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+      },
     })
-
-    await user.save()
-
-    return NextResponse.json(
-      { message: 'User registered successfully' },
-      { status: 201 }
-    )
+    
+    // Return success without exposing password
+    return NextResponse.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    }, { status: 201 })
+    
   } catch (error) {
-    console.error('Registration error:', error)
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { message: error.errors[0].message },
-        { status: 400 }
-      )
-    }
+    console.error('Error during registration:', error)
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { error: 'An error occurred during registration' }, 
       { status: 500 }
     )
   }

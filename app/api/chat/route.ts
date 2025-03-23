@@ -45,8 +45,8 @@ export async function POST(req: Request) {
             success: true,
             response,
             // Add parsed commands and outputs here for frontend processing
-            commands: parseCommands(response),
-            outputs: parseOutputs(response)
+            commands: parseCommands(response || ''),
+            outputs: parseOutputs(response || '')
         });
 
     } catch (error) {

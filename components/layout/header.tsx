@@ -1,14 +1,26 @@
 "use client"
 
 import { usePathname } from "next/navigation"
+import { 
+  LayoutDashboard, 
+  Building2, 
+  Users, 
+  Settings as SettingsIcon 
+} from "lucide-react"
+
+interface PageInfo {
+  title: string;
+  icon: React.ReactNode;
+}
 
 export function Header() {
   const pathname = usePathname()
-  const title = getTitle(pathname)
+  const { title, icon } = getPageInfo(pathname)
 
   return (
     <div className="flex h-14 items-center justify-between px-6">
       <div className="flex items-center gap-2">
+        {icon}
         <h1 className="text-lg font-semibold">{title}</h1>
       </div>
       <div className="text-sm text-muted-foreground">
@@ -18,17 +30,32 @@ export function Header() {
   )
 }
 
-function getTitle(pathname: string): string {
+function getPageInfo(pathname: string): PageInfo {
   switch (pathname) {
     case '/':
-      return 'Dashboard'
+      return {
+        title: 'Dashboard',
+        icon: <LayoutDashboard className="h-5 w-5" />
+      }
     case '/business':
-      return 'Business'
+      return {
+        title: 'Business',
+        icon: <Building2 className="h-5 w-5" />
+      }
     case '/team':
-      return 'Team'
+      return {
+        title: 'Team',
+        icon: <Users className="h-5 w-5" />
+      }
     case '/settings':
-      return 'Settings'
+      return {
+        title: 'Settings',
+        icon: <SettingsIcon className="h-5 w-5" />
+      }
     default:
-      return 'Dashboard'
+      return {
+        title: 'Dashboard',
+        icon: <LayoutDashboard className="h-5 w-5" />
+      }
   }
 }

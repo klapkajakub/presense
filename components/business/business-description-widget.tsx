@@ -62,7 +62,8 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
         })
       })
 
-      if (!response.ok) throw new Error('Failed to save description')
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error)
       toast.success('Business description saved')
       setIsOpen(false)
       onClose?.()
@@ -213,4 +214,4 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
       </Dialog>
     </>
   )
-} 
+}

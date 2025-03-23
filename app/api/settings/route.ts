@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
-import { getServerSession } from 'next-auth'
+import { auth } from '@/auth'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { connectDB } from '@/lib/db'
 import { User } from '@/models/User'
-import { authOptions } from '../auth/[...nextauth]/route'
 
 const UPLOAD_DIR = join(process.cwd(), 'public/uploads')
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
@@ -81,7 +80,7 @@ export async function POST(request: Request) {
 
 export async function PUT(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth.getServerSession()
     if (!session?.user?.id) {
       console.error('No user ID in session:', session)
       return NextResponse.json(

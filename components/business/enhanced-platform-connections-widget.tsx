@@ -121,4 +121,74 @@ export function EnhancedPlatformConnectionsWidget() {
       // Update local state to show syncing status
       setConnections(prev => prev.map(conn => 
         conn.platform === platform 
-          ? { ...conn, syncStatus:
+          ? { ...conn, syncStatus: 'syncing' }
+          : conn
+      ))
+      
+      const response = await fetch(`/api/platform-connections/${platform}/sync`, {
+        method: 'POST'
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to sync')
+      }
+      
+      const data = await response.json()
+      setConnections(prev => prev.map(conn => 
+        conn.platform === platform 
+          ? { ...conn, syncStatus: 'success', lastSyncedAt: new Date(data.lastSyncedAt) }
+          : conn
+      ))
+      toast.success(`${PLATFORM_CONFIGS[platform].name} synced successfully`)
+    } catch (error) {
+      console.error('Error syncing platform:', error)
+      setConnections(prev => prev.map(conn => 
+        conn.platform === platform 
+          ? { ...conn, syncStatus: 'error', errorMessage: error instanceof Error ? error.message : 'Failed to sync' }
+          : conn
+      ))
+      toast.error(error instanceof Error ? error.message : 'Failed to sync platform')
+    }
+  }
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {connections.map((conn) => (
+        <Card key={conn.platform}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{PLATFORM_CONFIGS[conn.platform].name}</CardTitle>
+            <div className="flex items-center space-x-2">
+              <IconContainer icon={PLATFORM_CONFIGS[conn.platform].icon} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xs font-medium text-gray-600">
+              {conn.syncStatus === 'idle' ? 'Not connected' : conn.syncStatus === 'syncing' ? 'Connecting...' : conn.syncStatus === 'success' ? 'Connected' : 'Error'}
+            </div>
+            <div className="text-sm text-gray-500">
+              {conn.syncStatus === 'success' ? conn.lastSyncedAt?.toLocaleDateString() : conn.errorMessage}
+            </div>
+          </CardContent>
+          <div className="mt-4 flex items-center justify-between space-x-4">
+            {conn.syncStatus === 'idle' && (
+              <Button variant="outline" size="sm" onClick={() => handleConnect(conn.platform)}>
+                Connect
+              </Button>
+            )}
+            {conn.syncStatus === 'success' && (
+              <Button variant="outline" size="sm" onClick={() => handleDisconnect(conn.platform)}>
+                Disconnect
+              </Button>
+            )}
+            {conn.syncStatus === 'idle' && (
+              <Button variant="outline" size="sm" onClick={() => handleSync(conn.platform)}>
+                Sync
+              </Button>
+            )}
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
+}
