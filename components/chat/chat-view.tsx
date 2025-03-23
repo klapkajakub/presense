@@ -36,12 +36,12 @@ export function ChatView() {
 
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
-          {messages.map((message) => (
+          {messages.map((message, index) => (
             <ChatMessage
-              key={message.id}
+              key={index}
               role={message.role}
               content={message.content}
-              messageId={message.id}
+              messageId={`${message.role}-${index}`}
             />
           ))}
         </div>

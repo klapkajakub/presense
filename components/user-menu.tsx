@@ -1,6 +1,6 @@
 "use client"
 
-import { useAuth } from '@/lib/contexts/auth-context'
+import { useAuth } from '@/lib/contexts/mock-auth-context'
 import { UserAvatar } from './user-avatar'
 import {
   DropdownMenu,
@@ -30,4 +30,4 @@ export function UserMenu() {
       </DropdownMenuContent>
     </DropdownMenu>
   )
-} 
+}

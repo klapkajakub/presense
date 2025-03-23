@@ -9,19 +9,15 @@ import { useChat } from "@/lib/hooks/use-chat"
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { isOpen } = useChat()
-  const isAuthPage = pathname === '/auth/signin' || pathname === '/auth/signup'
-
-  if (isAuthPage) {
-    return <>{children}</>
-  }
+  const { isOpen, width } = useChat()
+  // Auth pages have been removed
 
   return (
-    <MainLayout>
+    <MainLayout style={{ paddingRight: isOpen ? `${width}px` : 0 }}>
       {children}
       <ChatButton />
       <CommandMenu />
       {isOpen && <ResizableChat />}
     </MainLayout>
   )
-} 
+}

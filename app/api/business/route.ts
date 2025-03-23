@@ -1,28 +1,15 @@
 import { NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
-import { connectDB } from '@/lib/db';
+import { connectDB } from '@/lib/database';
 import { Business } from '@/models/Business';
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-
-async function verifyAuth(request: Request) {
-  const token = request.headers.get('Authorization')?.split(' ')[1];
-  if (!token) {
-    return null;
-  }
-
-  try {
-    const { payload } = await jwtVerify(token, secret);
-    return payload;
-  } catch {
-    return null;
-  }
-}
+import { cookies } from 'next/headers';
+import { getIronSession } from 'iron-session';
+import { sessionOptions } from '../../../lib/session';
 
 export async function GET(request: Request) {
   try {
-    const payload = await verifyAuth(request);
-    if (!payload) {
+    const session = await getIronSession(cookies(), sessionOptions);
+    
+    if (!session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -42,8 +29,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const payload = await verifyAuth(request);
-    if (!payload) {
+    const session = await getIronSession(cookies(), sessionOptions);
+    
+    if (!session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

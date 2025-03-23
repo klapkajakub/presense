@@ -1,6 +1,6 @@
 "use client"
 
-import { useAuth } from '@/lib/contexts/auth-context'
+import { useAuth } from '@/lib/contexts/mock-auth-context'
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import {

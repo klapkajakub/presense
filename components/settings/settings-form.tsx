@@ -1,6 +1,6 @@
 "use client"
 
-import { useAuth } from '@/lib/contexts/auth-context'
+import { useAuth } from '@/lib/contexts/mock-auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,29 +13,14 @@ export function SettingsForm() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
-
-    try {
-      const formData = new FormData(e.currentTarget)
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.get('email'),
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to update settings')
-      }
-
-      // Handle success
-    } catch (error) {
-      console.error('Error updating settings:', error)
-    } finally {
+    
+    // Settings functionality has been disabled
+    console.log('Settings functionality has been disabled')
+    
+    // Simulate API call
+    setTimeout(() => {
       setIsLoading(false)
-    }
+    }, 1000)
   }
 
   if (!user) return null
@@ -57,4 +42,4 @@ export function SettingsForm() {
       </Button>
     </form>
   )
-} 
+}

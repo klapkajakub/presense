@@ -24,7 +24,7 @@ import {
   Bot
 } from "lucide-react"
 import { ChatMessage } from "./chat-message"
-import { useAuth } from '@/lib/contexts/auth-context'
+import { useAuth } from '@/lib/contexts/mock-auth-context'
 import { ChatView } from "./chat-view"
 
 const MIN_WIDTH = 400
@@ -278,7 +278,13 @@ export function ResizableChat() {
             <ScrollArea className="h-full">
               <div className="flex flex-col gap-4 p-4" ref={scrollRef}>
                 {(searchQuery ? filteredMessages : messages).map((msg, i) => (
-                  <ChatMessage key={i} {...msg} highlight={searchQuery} />
+                  <ChatMessage 
+                    key={i} 
+                    role={msg.role} 
+                    content={msg.content} 
+                    messageId={`${msg.role}-${i}`} 
+                    highlight={searchQuery} 
+                  />
                 ))}
               </div>
             </ScrollArea>

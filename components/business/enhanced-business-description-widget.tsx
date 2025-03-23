@@ -1,26 +1,35 @@
-"use client"
+\"use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { IconContainer } from "@/components/ui/icon-container"
-import { useBusiness } from "./business-context"
-import { Building2, Wand2, Globe } from "lucide-react"
+import { useEnhancedBusiness } from "./enhanced-business-context"
+import { Building2, Wand2, Globe, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PLATFORM_CONFIGS } from "@/types/business"
 
-interface BusinessDescriptionWidgetProps {
+interface EnhancedBusinessDescriptionWidgetProps {
   onClose?: () => void
 }
 
-export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidgetProps) {
+export function EnhancedBusinessDescriptionWidget({ onClose }: EnhancedBusinessDescriptionWidgetProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isImproving, setIsImproving] = useState(false)
+  const [isGenerating, setIsGenerating] = useState<Record<string, boolean>>({}) 
+  const [isSaving, setIsSaving] = useState(false)
   const [platformVariants, setPlatformVariants] = useState<Record<string, string>>({})
-  const { businessInfo, updateDescription } = useBusiness()
+  const { businessInfo, updateDescription, updatePlatformDescription, fetchBusinessData } = useEnhancedBusiness()
+
+  // Load platform descriptions from context when dialog opens
+  useEffect(() => {
+    if (isOpen && businessInfo.platformDescriptions) {
+      setPlatformVariants(businessInfo.platformDescriptions)
+    }
+  }, [isOpen, businessInfo.platformDescriptions])
 
   const handleImprove = async () => {
     try {
@@ -30,17 +39,16 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'same-origin',
         body: JSON.stringify({
-          currentText: businessInfo.description,
-          maxLength: 2000 // Maximum length for base description
+          text: businessInfo.description,
+          platform: 'general'
         }),
       })
 
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Failed to improve text')
 
-      updateDescription(data.improvedText)
+      updateDescription(data.text)
       toast.success('Business description improved')
     } catch (error) {
       console.error('Error improving text:', error)
@@ -52,38 +60,46 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
 
   const handleSave = async () => {
     try {
-      const response = await fetch('/api/business', {
+      setIsSaving(true)
+      const response = await fetch('/api/business-description/enhanced', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
         body: JSON.stringify({
           description: businessInfo.description,
-          platformVariants
+          platformDescriptions: platformVariants
         })
       })
 
-      if (!response.ok) throw new Error('Failed to save description')
-      toast.success('Business description saved')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to save description')
+      }
+      
+      // Refresh business data
+      await fetchBusinessData()
+      toast.success('Business descriptions saved')
       setIsOpen(false)
       onClose?.()
     } catch (error) {
       console.error('Error saving description:', error)
       toast.error('Failed to save description')
+    } finally {
+      setIsSaving(false)
     }
   }
 
   const generatePlatformVariant = async (platform: string) => {
     try {
+      setIsGenerating(prev => ({ ...prev, [platform]: true }))
       const response = await fetch('/api/improve', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'same-origin',
         body: JSON.stringify({
-          currentText: businessInfo.description,
-          maxLength: PLATFORM_CONFIGS[platform].maxLength,
-          platform: PLATFORM_CONFIGS[platform].name
+          text: businessInfo.description,
+          platform: PLATFORM_CONFIGS[platform].name,
+          maxLength: PLATFORM_CONFIGS[platform].maxLength
         }),
       })
 
@@ -92,18 +108,21 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
 
       setPlatformVariants(prev => ({
         ...prev,
-        [platform]: data.improvedText
+        [platform]: data.text
       }))
+      updatePlatformDescription(platform, data.text)
       toast.success(`${PLATFORM_CONFIGS[platform].name} variant generated`)
     } catch (error) {
       console.error('Error generating platform variant:', error)
       toast.error('Failed to generate platform variant')
+    } finally {
+      setIsGenerating(prev => ({ ...prev, [platform]: false }))
     }
   }
 
-  const preview = businessInfo.description.length > 150 
+  const preview = businessInfo.description?.length > 150 
     ? businessInfo.description.slice(0, 150) + '...'
-    : businessInfo.description
+    : businessInfo.description || ''
 
   return (
     <>
@@ -125,7 +144,7 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
             {preview || 'No description set'}
           </p>
           <div className="mt-2 text-xs text-muted-foreground">
-            {businessInfo.description.length} characters
+            {businessInfo.description?.length || 0} characters
           </div>
         </CardContent>
       </Card>
@@ -146,13 +165,13 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
             
             <TabsContent value="main" className="space-y-4">
               <Textarea
-                value={businessInfo.description}
+                value={businessInfo.description || ''}
                 onChange={(e) => updateDescription(e.target.value)}
                 placeholder="Enter your business description"
                 className="min-h-[200px]"
               />
               <div className="text-xs text-muted-foreground">
-                {businessInfo.description.length} characters
+                {businessInfo.description?.length || 0} characters
               </div>
               <div className="flex justify-end gap-2">
                 <Button
@@ -160,7 +179,12 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
                   onClick={handleImprove}
                   disabled={isImproving || !businessInfo.description}
                 >
-                  {isImproving ? 'Improving...' : (
+                  {isImproving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Improving...
+                    </>
+                  ) : (
                     <>
                       <Wand2 className="mr-2 h-4 w-4" />
                       Improve
@@ -182,9 +206,19 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
                       variant="outline"
                       size="sm"
                       onClick={() => generatePlatformVariant(platform)}
+                      disabled={isGenerating[platform]}
                     >
-                      <Globe className="mr-2 h-4 w-4" />
-                      Generate
+                      {isGenerating[platform] ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Globe className="mr-2 h-4 w-4" />
+                          Generate
+                        </>
+                      )}
                     </Button>
                   </div>
                   <Textarea
@@ -198,6 +232,11 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
                   />
                   <div className="text-xs text-muted-foreground">
                     {platformVariants[platform]?.length || 0} / {config.maxLength} characters
+                    {platformVariants[platform]?.length > config.maxLength && (
+                      <span className="text-red-500 ml-2">
+                        Exceeds maximum length!
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -205,12 +244,20 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
           </Tabs>
 
           <div className="flex justify-end">
-            <Button onClick={handleSave}>
-              Save All
+            <Button 
+              onClick={handleSave}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : 'Save All'}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
     </>
   )
-} 
+}

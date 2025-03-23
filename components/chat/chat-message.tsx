@@ -11,7 +11,7 @@ import { useModal } from "@/components/modals/modal-context"
 import { useBusiness } from "@/components/business/business-context"
 import { parseMessage } from "@/lib/chat/message-parser"
 import type { Components } from 'react-markdown'
-import { useAuth } from '@/lib/contexts/auth-context'
+import { useAuth } from '@/lib/contexts/mock-auth-context'
 import { Message } from 'ai'
 import { UserAvatar } from '@/components/user-avatar'
 
@@ -47,19 +47,22 @@ const MarkdownComponents: Components = {
 }
 
 interface ChatMessageProps {
-  message: Message
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+  messageId?: string;
+  highlight?: string;
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ role, content, messageId, highlight }: ChatMessageProps) {
   const { user } = useAuth()
-  const isUser = message.role === 'user'
+  const isUser = role === 'user'
   const [copied, setCopied] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const { openModal } = useModal()
   const { updateDescription } = useBusiness()
 
   // Extract commands from content
-  const { mainContent, commands } = parseMessage(message.content)
+  const { mainContent, commands } = parseMessage(content)
 
   // Execute commands only once and persist execution state
   useEffect(() => {
@@ -68,8 +71,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
       const executedCommands = JSON.parse(localStorage.getItem('executedCommands') || '{}')
       
       for (const cmd of commands) {
-        // Create a unique key for this command using messageId
-        const cmdKey = `${message.id}-${cmd.command}-${cmd.platform || ''}-${cmd.text || ''}`
+        // Create a unique key for this command using messageId or a fallback
+        const cmdId = messageId || 'unknown'
+        const cmdKey = `${cmdId}-${cmd.command}-${cmd.platform || ''}-${cmd.text || ''}`
         
         // Skip if already executed
         if (executedCommands[cmdKey]) continue
@@ -92,7 +96,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
     }
 
     executeCommands()
-  }, [commands, openModal, updateDescription, message.id])
+  }, [commands, openModal, updateDescription, messageId])
 
   // Handle copy function
   const handleCopy = async () => {
@@ -120,11 +124,11 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
   // Highlight matching text if search is active
   const highlightText = (text: string) => {
-    if (!message.highlight) return text
+    if (!highlight) return text
 
-    const parts = text.split(new RegExp(`(${message.highlight})`, 'gi'))
+    const parts = text.split(new RegExp(`(${highlight})`, 'gi'))
     return parts.map((part, i) => 
-      part.toLowerCase() === message.highlight.toLowerCase() ? 
+      part.toLowerCase() === highlight.toLowerCase() ? 
         <span key={i} className="bg-yellow-200 dark:bg-yellow-900">{part}</span> : 
         part
     )

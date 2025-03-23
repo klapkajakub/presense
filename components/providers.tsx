@@ -6,7 +6,7 @@ import { ChatProvider } from "./chat/chat-context"
 import { BusinessProvider } from "./business/business-context"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "sonner"
-import { AuthProvider } from '@/lib/contexts/auth-context'
+import { AuthProvider } from '@/lib/contexts/mock-auth-context'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (

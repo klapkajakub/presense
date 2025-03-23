@@ -1,39 +1,27 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
-import { BusinessHours } from '@/models/BusinessHours';
+// Import the BusinessHours type for type checking
+import { IBusinessHours } from '@/models/BusinessHours';
 
 export async function GET() {
   try {
-    await connectDB();
-    const hours = await BusinessHours.findOne().lean();
-
-    if (!hours) {
-      // Return default business hours if none exist
-      const defaultHours = {
-        regularHours: {
-          monday: { isOpen: true, ranges: [{ open: "09:00", close: "17:00" }] },
-          tuesday: { isOpen: true, ranges: [{ open: "09:00", close: "17:00" }] },
-          wednesday: { isOpen: true, ranges: [{ open: "09:00", close: "17:00" }] },
-          thursday: { isOpen: true, ranges: [{ open: "09:00", close: "17:00" }] },
-          friday: { isOpen: true, ranges: [{ open: "09:00", close: "17:00" }] },
-          saturday: { isOpen: false, ranges: [] },
-          sunday: { isOpen: false, ranges: [] }
-        },
-        specialDays: []
-      };
-
-      // Create default hours in database
-      await BusinessHours.create(defaultHours);
-
-      return NextResponse.json({
-        success: true,
-        data: defaultHours
-      });
-    }
+    // Return mock business hours data
+    const mockHours = {
+      _id: "mock-business-hours-id",
+      regularHours: {
+        monday: { isOpen: true, ranges: [{ open: "09:00", close: "17:00" }] },
+        tuesday: { isOpen: true, ranges: [{ open: "09:00", close: "17:00" }] },
+        wednesday: { isOpen: true, ranges: [{ open: "09:00", close: "17:00" }] },
+        thursday: { isOpen: true, ranges: [{ open: "09:00", close: "17:00" }] },
+        friday: { isOpen: true, ranges: [{ open: "09:00", close: "17:00" }] },
+        saturday: { isOpen: false, ranges: [] },
+        sunday: { isOpen: false, ranges: [] }
+      },
+      specialDays: []
+    } as IBusinessHours;
 
     return NextResponse.json({
       success: true,
-      data: hours
+      data: mockHours
     });
   } catch (error) {
     console.error('GET Error:', error);
@@ -46,7 +34,6 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await connectDB();
     const { hours } = await request.json();
 
     // Validate the hours data
@@ -54,15 +41,15 @@ export async function POST(request: Request) {
       throw new Error('Invalid hours data');
     }
 
-    const updated = await BusinessHours.findOneAndUpdate(
-      {},
-      hours,
-      { upsert: true, new: true, lean: true }
-    );
+    // Instead of saving to database, just return the submitted hours with an ID
+    const mockUpdated = {
+      _id: "mock-business-hours-id",
+      ...hours
+    };
 
     return NextResponse.json({
       success: true,
-      data: updated
+      data: mockUpdated
     });
   } catch (error) {
     console.error('POST Error:', error);
@@ -71,4 +58,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}

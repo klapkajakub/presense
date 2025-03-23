@@ -1,6 +1,6 @@
 "use client"
 
-import { useAuth } from '@/lib/contexts/auth-context'
+import { useAuth } from '@/lib/contexts/mock-auth-context'
 import { useChat } from "@/lib/hooks/use-chat"
 import { Button } from "@/components/ui/button"
 import { MessageCircle } from "lucide-react"
