@@ -24,16 +24,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check session on mount
-    fetch('/api/auth/session')
+    // Check if token exists in localStorage
+    const token = localStorage.getItem('token')
+    
+    if (!token) {
+      setIsLoading(false)
+      return
+    }
+    
+    // Verify token with the server
+    fetch('/api/auth/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    })
       .then(res => res.json())
       .then(data => {
-        if (data.user) {
+        if (data.valid && data.user) {
           setUser(data.user)
+        } else {
+          // Invalid token, remove it
+          localStorage.removeItem('token')
         }
       })
       .catch(error => {
-        console.error('Error checking session:', error)
+        console.error('Error verifying token:', error)
+        localStorage.removeItem('token')
       })
       .finally(() => {
         setIsLoading(false)
@@ -43,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       await fetch('/api/auth/signout', { method: 'POST' })
+      localStorage.removeItem('token')
       setUser(null)
     } catch (error) {
       console.error('Error signing out:', error)
@@ -56,4 +73,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-export const useAuth = () => useContext(AuthContext) 
+export const useAuth = () => useContext(AuthContext)

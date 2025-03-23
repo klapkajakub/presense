@@ -2,6 +2,18 @@ import { NextResponse } from 'next/server'
 import { connectDB } from '@/lib/database'
 import { User } from '@/models/User'
 import { cookies } from 'next/headers'
+import { SignJWT } from 'jose'
+
+// Helper function to generate JWT token
+async function generateToken(userId: string) {
+  const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback_secret_for_development')
+  const token = await new SignJWT({ sub: userId })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('24h')
+    .sign(secret)
+  return token
+}
 
 export async function POST(request: Request) {
   try {
@@ -71,6 +83,9 @@ export async function POST(request: Request) {
         )
       }
 
+      // Generate JWT token
+      const token = await generateToken(user._id.toString())
+      
       // Set session cookie
       const cookieStore = cookies()
       cookieStore.set('session', user._id.toString(), {
@@ -82,6 +97,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({ 
         success: true,
+        token,
         user: {
           id: user._id,
           email: user.email
@@ -124,6 +140,9 @@ export async function POST(request: Request) {
         )
       }
 
+      // Generate JWT token
+      const token = await generateToken(user._id.toString())
+      
       // Set session cookie
       const cookieStore = cookies()
       cookieStore.set('session', user._id.toString(), {
@@ -135,6 +154,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({ 
         success: true,
+        token,
         user: {
           id: user._id,
           email: user.email
@@ -154,4 +174,4 @@ export async function POST(request: Request) {
       { status: 500 }
     )
   }
-} 
+}

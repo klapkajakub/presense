@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { connectDB } from '@/lib/db'
+import { connectDB } from '@/lib/database'
 import { User } from '@/models/User'
 
 export async function GET() {
@@ -29,4 +29,4 @@ export async function GET() {
     console.error('Error checking session:', error)
     return NextResponse.json({ user: null })
   }
-} 
+}
