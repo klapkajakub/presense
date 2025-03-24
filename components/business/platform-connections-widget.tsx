@@ -202,16 +202,6 @@ export function PlatformConnectionsWidget() {
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           Syncing...
                         </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
-  )
                       ) : connection?.syncStatus === 'success' ? (
                         <div className="flex items-center gap-2">
                           <Button
@@ -225,16 +215,6 @@ export function PlatformConnectionsWidget() {
                             <RefreshCw className="h-4 w-4 mr-2" />
                             Sync
                           </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
-  )
                           <Button
                             variant="destructive"
                             size="sm"
@@ -245,16 +225,6 @@ export function PlatformConnectionsWidget() {
                           >
                             Disconnect
                           </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
-  )
                         </div>
                       ) : connection?.syncStatus === 'error' ? (
                         <div className="flex flex-col items-end gap-1">
@@ -268,16 +238,6 @@ export function PlatformConnectionsWidget() {
                           >
                             Retry
                           </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
-  )
                         </div>
                       ) : (
                         <Button
@@ -289,16 +249,6 @@ export function PlatformConnectionsWidget() {
                         >
                           Connect
                         </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
-  )
                       )}
                     </div>
                   </div>
@@ -355,16 +305,6 @@ export function PlatformConnectionsWidget() {
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           Syncing...
                         </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
-  )
                       ) : connection?.syncStatus === 'success' ? (
                         <>
                           <Button
@@ -375,16 +315,6 @@ export function PlatformConnectionsWidget() {
                             <RefreshCw className="h-4 w-4 mr-2" />
                             Sync Now
                           </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
-  )
                           <Button
                             variant="destructive"
                             size="sm"
@@ -392,17 +322,8 @@ export function PlatformConnectionsWidget() {
                           >
                             Disconnect
                           </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
-  )
                         </>
+                      )
                       ) : (
                         <Button
                           size="sm"
@@ -410,24 +331,15 @@ export function PlatformConnectionsWidget() {
                         >
                           Connect
                         </Button>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
-  )
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   )
 }
