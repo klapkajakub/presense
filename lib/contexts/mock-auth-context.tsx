@@ -5,6 +5,8 @@ import { createContext, useContext } from 'react'
 interface User {
   id: string
   email: string
+  name?: string | null
+  image?: string | null
 }
 
 interface AuthContextType {
@@ -27,7 +29,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Mock user that's always logged in
   const mockUser = {
     id: 'mock-user-id',
-    email: 'user@example.com'
+    email: 'user@example.com',
+    name: 'Demo User',
+    image: null
   }
   
   // Mock signOut function that does nothing

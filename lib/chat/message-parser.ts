@@ -30,6 +30,11 @@ export function parseMessage(content: string): ParsedMessage {
 }
 
 export function parseCommandOutput(content: string) {
+  // Ensure content is a valid string
+  if (!content || typeof content !== 'string') {
+    return { messageContent: '', commands: [], outputs: [] };
+  }
+
   const commandRegex = /\[command name="([^"]+)"\]/g;
   const outputRegex = /\[output type="([^"]+)" content="([^"]+)"\]/g;
   
@@ -64,4 +69,4 @@ export function parseCommandOutput(content: string) {
   }
 
   return { messageContent, commands, outputs };
-} 
+}

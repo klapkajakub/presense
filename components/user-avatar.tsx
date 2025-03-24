@@ -36,11 +36,11 @@ export function UserAvatar({
     if (!currentUser?.name) return ""
     
     const nameParts = currentUser.name.split(" ")
-    if (nameParts.length === 1) {
+    if (nameParts.length === 1 && nameParts[0]) {
       return nameParts[0].substring(0, 2).toUpperCase()
     }
     
-    return `${nameParts[0].charAt(0)}${nameParts[1].charAt(0)}`.toUpperCase()
+    return `${nameParts[0]?.charAt(0) || ''}${nameParts[1]?.charAt(0) || ''}`.toUpperCase()
   }
 
   const initials = getUserInitials()
@@ -59,4 +59,4 @@ export function UserAvatar({
       </AvatarFallback>
     </Avatar>
   )
-} 
+}

@@ -68,6 +68,10 @@ export function ChatInput() {
 
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
+    
+    // Check if start and end are valid numbers before using substring
+    if (start === null || end === null || typeof start !== 'number' || typeof end !== 'number') return
+    
     const selectedText = input.substring(start, end)
     const beforeText = input.substring(0, start)
     const afterText = input.substring(end)

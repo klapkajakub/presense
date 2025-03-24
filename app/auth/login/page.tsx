@@ -12,8 +12,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { FcGoogle } from "react-icons/fc"
-import { FaGithub } from "react-icons/fa"
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -62,12 +60,7 @@ export default function LoginPage() {
     }
   }
 
-  const handleSocialSignIn = (provider: string) => {
-    signIn(provider, { 
-      callbackUrl: callbackUrl || "/",
-      redirect: true
-    })
-  }
+  // Simple login without social providers
 
   return (
     <div className="flex items-center justify-center min-h-screen px-4">
@@ -134,35 +127,7 @@ export default function LoginPage() {
             </form>
           </Form>
           
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t"></div>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="px-2 bg-background text-muted-foreground">
-                Or continue with
-              </span>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <Button 
-              variant="outline" 
-              onClick={() => handleSocialSignIn("google")}
-              disabled={isLoading}
-              className="flex items-center justify-center gap-2"
-            >
-              <FcGoogle className="w-5 h-5" /> Google
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => handleSocialSignIn("github")}
-              disabled={isLoading}
-              className="flex items-center justify-center gap-2"
-            >
-              <FaGithub className="w-5 h-5" /> GitHub
-            </Button>
-          </div>
+
         </CardContent>
         <CardFooter className="flex justify-center">
           <div className="text-sm text-center">
@@ -178,4 +143,4 @@ export default function LoginPage() {
       </Card>
     </div>
   )
-} 
+}
