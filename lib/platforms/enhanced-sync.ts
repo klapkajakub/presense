@@ -134,6 +134,16 @@ export async function syncPlatform(connection: PlatformConnection, data: Enhance
       return syncGoogleBusinessEnhanced(connection, data);
     case 'facebook':
       return syncFacebookEnhanced(connection, data);
+    case 'instagram':
+      // Instagram uses the same API as Facebook
+      return syncFacebookEnhanced(connection, data);
+    case 'firmy':
+      // Implement Firmy.cz sync when API is available
+      return {
+        success: false,
+        message: `Firmy.cz integration is not yet implemented`,
+        error: 'Platform integration in progress'
+      };
     default:
       return {
         success: false,

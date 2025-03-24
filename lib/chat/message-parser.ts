@@ -47,7 +47,7 @@ export function parseCommandOutput(content: string) {
     firstOutput > -1 ? firstOutput : Infinity
   );
   
-  if (firstIndex !== Infinity) {
+  if (firstIndex !== Infinity && typeof content === 'string') {
     messageContent = content.substring(0, firstIndex).trim();
   }
 

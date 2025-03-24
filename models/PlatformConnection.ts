@@ -1,6 +1,6 @@
 import mongoose, { Document } from 'mongoose';
 
-export type PlatformType = 'google' | 'facebook';
+export type PlatformType = 'google' | 'facebook' | 'instagram' | 'firmy';
 
 interface IPlatformConnection extends Document {
   userId: string;
@@ -15,7 +15,7 @@ interface IPlatformConnection extends Document {
 
 const PlatformConnectionSchema = new mongoose.Schema<IPlatformConnection>({
   userId: { type: String, required: true },
-  platform: { type: String, required: true, enum: ['google', 'facebook'] },
+  platform: { type: String, required: true, enum: ['google', 'facebook', 'instagram', 'firmy'] },
   accessToken: { type: String, required: true },
   refreshToken: { type: String },
   tokenExpiresAt: { type: Date },
@@ -32,4 +32,4 @@ PlatformConnectionSchema.index({ userId: 1, platform: 1 }, { unique: true });
 const PlatformConnection = (mongoose.models.PlatformConnection as mongoose.Model<IPlatformConnection>) ||
   mongoose.model<IPlatformConnection>('PlatformConnection', PlatformConnectionSchema);
 
-export { PlatformConnection }; 
+export { PlatformConnection };

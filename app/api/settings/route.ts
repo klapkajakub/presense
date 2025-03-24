@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
-import { auth } from '@/auth'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { connectDB } from '@/lib/db'
@@ -229,4 +228,4 @@ export async function PUT(req: Request) {
       { status: 500 }
     )
   }
-} 
+}

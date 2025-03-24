@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useAuth } from "@/lib/contexts/auth-context"
-import { signOut } from "@/auth"
+import { useAuth } from "@/lib/contexts/mock-auth-context"
 import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -57,7 +56,9 @@ export default function SettingsPage() {
   }
 
   const handleSignOut = async () => {
-    await signOut({ redirectTo: "/" })
+    const { signOut } = useAuth()
+    signOut()
+    router.push('/')
   }
 
   return (
@@ -163,4 +164,4 @@ export default function SettingsPage() {
       </Tabs>
     </div>
   )
-} 
+}

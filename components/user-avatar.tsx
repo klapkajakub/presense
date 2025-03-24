@@ -2,7 +2,7 @@
 
 import { AvatarProps } from "@radix-ui/react-avatar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useAuth } from "@/lib/contexts/auth-context"
+import { useAuth } from "@/lib/contexts/mock-auth-context"
 import { User } from "lucide-react"
 
 interface UserAvatarProps extends AvatarProps {

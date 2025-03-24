@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { PrismaClient } from "@prisma/client"
-import { auth } from "@/auth"
 
 const prisma = new PrismaClient()
 
@@ -12,15 +11,10 @@ const profileSchema = z.object({
 
 export async function PUT(request: Request) {
   try {
-    // Check authentication
-    const session = await auth()
+    // Using mock authentication - always authenticated
+    const mockUserId = 'mock-user-id'
     
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "You must be logged in to update your profile" }, 
-        { status: 401 }
-      )
-    }
+    // No authentication check needed as we're using mock auth
     
     // Parse and validate request body
     const body = await request.json()
@@ -41,7 +35,7 @@ export async function PUT(request: Request) {
     if (image !== undefined) updateData.image = image
     
     const updatedUser = await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: mockUserId },
       data: updateData,
       select: {
         id: true,
@@ -60,4 +54,4 @@ export async function PUT(request: Request) {
       { status: 500 }
     )
   }
-} 
+}

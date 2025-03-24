@@ -26,9 +26,12 @@ async function dbConnect() {
 
 export async function connectDB() {
   try {
+    if (!MONGODB_URI || MONGODB_URI === '') {
+      throw new Error('MONGODB_URI environment variable is not set or is empty')
+    }
     await dbConnect()
   } catch (error) {
     console.error('Database connection error:', error)
     throw error
   }
-} 
+}
