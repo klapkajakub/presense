@@ -1,4 +1,4 @@
-"use client"
+\"use client"
 
 import { useState, useRef } from "react"
 import { useChat } from "@/lib/hooks/use-chat"
@@ -14,7 +14,9 @@ import {
   Bold, 
   Italic, 
   Code, 
-  List
+  List,
+  Image as ImageIcon,
+  X
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -22,7 +24,10 @@ export function ChatInput() {
   const { addMessage } = useChat()
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   
   // Format buttons state
   const [isBold, setIsBold] = useState(false)
@@ -31,17 +36,44 @@ export function ChatInput() {
   const [isList, setIsList] = useState(false)
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return
+    if ((!input.trim() && !imageFile) || isLoading) return
 
     try {
       setIsLoading(true)
-      addMessage({ role: 'user', content: input })
+      
+      let imageUrl = null
+      
+      // Upload image if exists
+      if (imageFile) {
+        const formData = new FormData()
+        formData.append('file', imageFile)
+        
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        })
+        
+        const uploadData = await uploadResponse.json()
+        if (uploadData.success) {
+          imageUrl = uploadData.filePath
+        }
+      }
+      
+      // Add message to chat
+      addMessage({ role: 'user', content: input, image: imageUrl })
+      
+      // Clear input and image
       setInput('')
+      setImageFile(null)
+      setImagePreview(null)
 
+      // Send message to API
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [{ role: 'user', content: input }] })
+        body: JSON.stringify({ 
+          messages: [{ role: 'user', content: input, image: imageUrl }] 
+        })
       })
 
       const data = await response.json()
@@ -98,6 +130,40 @@ export function ChatInput() {
         end + marker.length
       )
     }, 0)
+  }
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    // Check if file is an image
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file')
+      return
+    }
+    
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size should be less than 5MB')
+      return
+    }
+    
+    setImageFile(file)
+    
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+  
+  const removeImage = () => {
+    setImageFile(null)
+    setImagePreview(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -173,7 +239,46 @@ export function ChatInput() {
           </TooltipTrigger>
           <TooltipContent side="top">List</TooltipContent>
         </Tooltip>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <Button 
+              size="icon" 
+              variant="ghost"
+              className="h-8 w-8 ml-auto"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <ImageIcon className="h-4 w-4" />
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                className="hidden" 
+                accept="image/*"
+                onChange={handleImageUpload}
+              />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Upload Image</TooltipContent>
+        </Tooltip>
       </div>
+
+      {/* Image Preview */}
+      {imagePreview && (
+        <div className="relative mb-2 inline-block">
+          <img 
+            src={imagePreview} 
+            alt="Preview" 
+            className="h-20 rounded-md object-cover" 
+          />
+          <Button 
+            size="icon" 
+            variant="destructive" 
+            className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0"
+            onClick={removeImage}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
 
       {/* Input Area */}
       <Textarea
@@ -189,7 +294,7 @@ export function ChatInput() {
         size="icon"
         className="absolute right-2 bottom-2 h-8 w-8"
         onClick={handleSend}
-        disabled={isLoading || !input.trim()}
+        disabled={isLoading || (!input.trim() && !imageFile)}
       >
         <Send className="h-4 w-4" />
       </Button>

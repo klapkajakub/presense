@@ -30,10 +30,22 @@ export async function POST(req: Request) {
         const chatMessages = messages[0]?.role === 'system' 
             ? messages 
             : [{ role: 'system', content: SYSTEM_PROMPT }, ...messages];
+            
+        // Extract image URLs from messages for later use
+        const imageUrls = {};
+        chatMessages.forEach((msg, index) => {
+            if (msg.image) {
+                imageUrls[index] = msg.image;
+            }
+        });
+            
+        // Filter out image property from messages for OpenAI API
+        // OpenAI API doesn't accept additional properties in messages
+        const apiMessages = chatMessages.map(({ role, content }) => ({ role, content }));
 
         const completion = await openai.chat.completions.create({
             model: "gpt-4-turbo-preview",
-            messages: chatMessages,
+            messages: apiMessages,
             temperature: 0.7,
             max_tokens: 1500,
         });
@@ -46,7 +58,9 @@ export async function POST(req: Request) {
             response,
             // Add parsed commands and outputs here for frontend processing
             commands: parseCommands(response || ''),
-            outputs: parseOutputs(response || '')
+            outputs: parseOutputs(response || ''),
+            // Include image URLs in the response
+            imageUrls
         });
 
     } catch (error) {

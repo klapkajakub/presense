@@ -51,9 +51,10 @@ interface ChatMessageProps {
   content: string;
   messageId?: string;
   highlight?: string;
+  image?: string;
 }
 
-export function ChatMessage({ role, content, messageId, highlight }: ChatMessageProps) {
+export function ChatMessage({ role, content, messageId, highlight, image }: ChatMessageProps)  {
   const { user } = useAuth()
   const isUser = role === 'user'
   const [copied, setCopied] = useState(false)
@@ -152,6 +153,11 @@ export function ChatMessage({ role, content, messageId, highlight }: ChatMessage
       </div>
       <div className="flex-1 space-y-2">
         <div className="prose prose-sm dark:prose-invert">
+          {image && (
+            <div className="mb-2">
+              <img src={image} alt="Uploaded image" className="rounded-md max-w-full max-h-[300px] object-contain" />
+            </div>
+          )}
           {isUser ? (
             <div className="whitespace-pre-wrap">{highlightText(mainContent)}</div>
           ) : (
@@ -193,16 +199,14 @@ export function ChatMessage({ role, content, messageId, highlight }: ChatMessage
           </div>
         ))}
 
-        {isUser && (
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="icon" onClick={handleCopy}>
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleSpeak}>
-              {isSpeaking ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-            </Button>
-          </div>
-        )}
+        <div className="flex gap-1 opacity-100 transition-opacity">
+          <Button variant="ghost" size="icon" onClick={handleCopy}>
+            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+          </Button>
+          <Button variant="ghost" size="icon" onClick={handleSpeak}>
+            {isSpeaking ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </Button>
+        </div>
       </div>
     </div>
   )

@@ -25,6 +25,7 @@ export function ChatMessages({ messages, highlight }: ChatMessagesProps) {
           role={message.role}
           content={message.content}
           highlight={highlight}
+          image={message.image}
         />
       ))}
       <div ref={bottomRef} />

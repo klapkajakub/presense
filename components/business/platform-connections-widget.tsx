@@ -7,11 +7,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { IconContainer } from "@/components/ui/icon-container"
 import { Globe, RefreshCw, CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 import { PlatformType } from "@/models/PlatformConnection"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
+// Platform connection interface
 interface PlatformConnection {
   platform: PlatformType;
   isConnected: boolean;
@@ -20,6 +19,7 @@ interface PlatformConnection {
   errorMessage?: string;
 }
 
+// Platform configuration with display information
 const PLATFORM_CONFIGS = {
   google: {
     name: 'Google My Business',
@@ -44,19 +44,23 @@ const PLATFORM_CONFIGS = {
 } as const;
 
 export function PlatformConnectionsWidget() {
+  // Component state
   const [isOpen, setIsOpen] = useState(false)
   const [connections, setConnections] = useState<PlatformConnection[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Fetch connections on component mount
   useEffect(() => {
     fetchConnections()
   }, [])
 
+  // Fetch platform connections from API
   const fetchConnections = async () => {
     try {
       setIsLoading(true)
       setError(null)
+      
       const response = await fetch('/api/platform-connections')
       
       if (!response.ok) {
@@ -78,7 +82,11 @@ export function PlatformConnectionsWidget() {
     }
   }
 
-  const handleConnect = async (platform: PlatformType) => {
+  // Handle platform connection
+  const handleConnect = async (platform: PlatformType, e?: React.MouseEvent) => {
+    // Prevent event propagation if event is provided
+    if (e) e.stopPropagation()
+    
     try {
       const response = await fetch(`/api/platform-connections/${platform}/auth`, {
         method: 'POST'
@@ -97,7 +105,11 @@ export function PlatformConnectionsWidget() {
     }
   }
 
-  const handleDisconnect = async (platform: PlatformType) => {
+  // Handle platform disconnection
+  const handleDisconnect = async (platform: PlatformType, e?: React.MouseEvent) => {
+    // Prevent event propagation if event is provided
+    if (e) e.stopPropagation()
+    
     try {
       const response = await fetch(`/api/platform-connections/${platform}`, {
         method: 'DELETE'
@@ -116,7 +128,11 @@ export function PlatformConnectionsWidget() {
     }
   }
 
-  const handleSync = async (platform: PlatformType) => {
+  // Handle platform sync
+  const handleSync = async (platform: PlatformType, e?: React.MouseEvent) => {
+    // Prevent event propagation if event is provided
+    if (e) e.stopPropagation()
+    
     try {
       // Update local state to show syncing status
       setConnections(prev => prev.map(conn => 
@@ -150,6 +166,96 @@ export function PlatformConnectionsWidget() {
       ))
       toast.error(error instanceof Error ? error.message : 'Failed to sync platform')
     }
+  }
+
+  // Render connection status icon based on sync status
+  const renderStatusIcon = (status?: string) => {
+    switch (status) {
+      case 'success':
+        return <CheckCircle2 className="h-4 w-4 text-green-500" />
+      case 'error':
+        return <AlertCircle className="h-4 w-4 text-red-500" />
+      case 'syncing':
+        return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+      default:
+        return <XCircle className="h-4 w-4 text-gray-400" />
+    }
+  }
+
+  // Render connection actions based on sync status
+  const renderConnectionActions = (platform: PlatformType, connection?: PlatformConnection, inDialog = false) => {
+    if (!connection) {
+      return (
+        <Button
+          size="sm"
+          onClick={(e) => inDialog ? handleConnect(platform) : handleConnect(platform, e)}
+        >
+          Connect
+        </Button>
+      )
+    }
+
+    if (connection.syncStatus === 'syncing') {
+      return (
+        <Button variant="outline" size="sm" disabled>
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          Syncing...
+        </Button>
+      )
+    }
+
+    if (connection.syncStatus === 'error') {
+      return (
+        <div className="flex flex-col items-end gap-1">
+          <p className="text-xs text-red-500">{connection.errorMessage}</p>
+          <Button
+            size="sm"
+            onClick={(e) => inDialog ? handleConnect(platform) : handleConnect(platform, e)}
+          >
+            Retry
+          </Button>
+        </div>
+      )
+    }
+
+    // Success state
+    return inDialog ? (
+      <>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleSync(platform)}
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Sync Now
+        </Button>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => handleDisconnect(platform)}
+        >
+          Disconnect
+        </Button>
+      </>
+    ) : (
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(e) => handleSync(platform, e)}
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Sync
+        </Button>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={(e) => handleDisconnect(platform, e)}
+        >
+          Disconnect
+        </Button>
+      </div>
+    )
   }
 
   return (
@@ -197,59 +303,7 @@ export function PlatformConnectionsWidget() {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {connection?.syncStatus === 'syncing' ? (
-                        <Button variant="outline" size="sm" disabled>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Syncing...
-                        </Button>
-                      ) : connection?.syncStatus === 'success' ? (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleSync(platform as PlatformType)
-                            }}
-                          >
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Sync
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDisconnect(platform as PlatformType)
-                            }}
-                          >
-                            Disconnect
-                          </Button>
-                        </div>
-                      ) : connection?.syncStatus === 'error' ? (
-                        <div className="flex flex-col items-end gap-1">
-                          <p className="text-xs text-red-500">{connection.errorMessage}</p>
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleConnect(platform as PlatformType)
-                            }}
-                          >
-                            Retry
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleConnect(platform as PlatformType)
-                          }}
-                        >
-                          Connect
-                        </Button>
-                      )}
+                      {renderConnectionActions(platform as PlatformType, connection)}
                     </div>
                   </div>
                 )
@@ -279,15 +333,7 @@ export function PlatformConnectionsWidget() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <h4 className="font-medium">{config.name}</h4>
-                        {connection?.syncStatus === 'success' ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        ) : connection?.syncStatus === 'error' ? (
-                          <AlertCircle className="h-4 w-4 text-red-500" />
-                        ) : connection?.syncStatus === 'syncing' ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                        ) : (
-                          <XCircle className="h-4 w-4 text-gray-400" />
-                        )}
+                        {renderStatusIcon(connection?.syncStatus)}
                       </div>
                       <p className="text-sm text-muted-foreground">{config.description}</p>
                       {connection?.lastSyncedAt && (
@@ -300,46 +346,15 @@ export function PlatformConnectionsWidget() {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {connection?.syncStatus === 'syncing' ? (
-                        <Button variant="outline" size="sm" disabled>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Syncing...
-                        </Button>
-                      ) : connection?.syncStatus === 'success' ? (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSync(platform as PlatformType)}
-                          >
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Sync Now
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDisconnect(platform as PlatformType)}
-                          >
-                            Disconnect
-                          </Button>
-                        </>
-                      )
-                      ) : (
-                        <Button
-                          size="sm"
-                          onClick={() => handleConnect(platform as PlatformType)}
-                        >
-                          Connect
-                        </Button>
-                      )}
+                      {renderConnectionActions(platform as PlatformType, connection, true)}
                     </div>
                   </div>
-                );
+                )
               })}
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
