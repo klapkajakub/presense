@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, createContext, useContext } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -12,6 +12,19 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PLATFORM_CONFIGS } from "@/types/business"
 
+// Create a context to expose the dialog control and platform field references
+interface BusinessDescriptionContextType {
+  openDialog: (platform?: string) => void
+  platformRefs: Record<string, React.RefObject<HTMLDivElement>>
+}
+
+export const BusinessDescriptionContext = createContext<BusinessDescriptionContextType>({
+  openDialog: () => {},
+  platformRefs: {}
+})
+
+export const useBusinessDescription = () => useContext(BusinessDescriptionContext)
+
 interface EnhancedBusinessDescriptionWidgetProps {
   onClose?: () => void
 }
@@ -22,7 +35,14 @@ export function EnhancedBusinessDescriptionWidget({ onClose }: EnhancedBusinessD
   const [isGenerating, setIsGenerating] = useState<Record<string, boolean>>({}) 
   const [isSaving, setIsSaving] = useState(false)
   const [platformVariants, setPlatformVariants] = useState<Record<string, string>>({})
+  const [activeTab, setActiveTab] = useState('main')
   const { businessInfo, updateDescription, updatePlatformDescription, fetchBusinessData } = useEnhancedBusiness()
+  
+  // Create refs for each platform field
+  const platformRefs = Object.keys(PLATFORM_CONFIGS).reduce<Record<string, React.RefObject<HTMLDivElement>>>((acc, platform) => {
+    acc[platform] = useRef<HTMLDivElement>(null)
+    return acc
+  }, {})
 
   // Load platform descriptions from context when dialog opens
   useEffect(() => {
@@ -124,11 +144,35 @@ export function EnhancedBusinessDescriptionWidget({ onClose }: EnhancedBusinessD
     ? businessInfo.description.slice(0, 150) + '...'
     : businessInfo.description || ''
 
+  // Function to open dialog and optionally switch to platforms tab and scroll to a specific platform
+  const openDialog = (platform?: string) => {
+    setIsOpen(true)
+    
+    if (platform) {
+      // Switch to platforms tab
+      setActiveTab('platforms')
+      
+      // Use setTimeout to ensure the dialog is open and the DOM is updated
+      setTimeout(() => {
+        // Scroll to the platform field
+        if (platformRefs[platform]?.current) {
+          platformRefs[platform].current?.scrollIntoView({ behavior: 'smooth' })
+        }
+      }, 100)
+    }
+  }
+  
+  // Context value
+  const contextValue = {
+    openDialog,
+    platformRefs
+  }
+  
   return (
-    <>
+    <BusinessDescriptionContext.Provider value={contextValue}>
       <Card 
         className="cursor-pointer hover:bg-accent/50 transition-colors"
-        onClick={() => setIsOpen(true)}
+        onClick={() => openDialog()}
       >
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -157,7 +201,7 @@ export function EnhancedBusinessDescriptionWidget({ onClose }: EnhancedBusinessD
               Set your main business description and generate platform-specific variants
             </DialogDescription>
           </DialogHeader>
-          <Tabs defaultValue="main" className="space-y-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
             <TabsList>
               <TabsTrigger value="main">Main Description</TabsTrigger>
               <TabsTrigger value="platforms">Platform Variants</TabsTrigger>
@@ -196,7 +240,7 @@ export function EnhancedBusinessDescriptionWidget({ onClose }: EnhancedBusinessD
 
             <TabsContent value="platforms" className="space-y-4">
               {Object.entries(PLATFORM_CONFIGS).map(([platform, config]) => (
-                <div key={platform} className="space-y-2">
+                <div key={platform} className="space-y-2" ref={platformRefs[platform]}>
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-medium">{config.name}</h4>
@@ -258,6 +302,6 @@ export function EnhancedBusinessDescriptionWidget({ onClose }: EnhancedBusinessD
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </BusinessDescriptionContext.Provider>
   )
 }

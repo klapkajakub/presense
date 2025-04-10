@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -11,6 +11,8 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { PlatformType } from "@/models/PlatformConnection"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { useEnhancedBusiness } from "./enhanced-business-context"
+import { useBusinessDescription } from "./enhanced-business-description-widget"
 
 interface PlatformConnection {
   platform: PlatformType;
@@ -48,6 +50,7 @@ export function EnhancedPlatformConnectionsWidget() {
   const [connections, setConnections] = useState<PlatformConnection[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { openDialog } = useBusinessDescription()
 
   useEffect(() => {
     fetchConnections()
@@ -152,10 +155,23 @@ export function EnhancedPlatformConnectionsWidget() {
     }
   }
 
+  // Function to handle platform card click
+  const handlePlatformClick = (platform: PlatformType, e: React.MouseEvent) => {
+    // Prevent event from triggering button clicks
+    e.stopPropagation();
+    
+    // Open the business description dialog and scroll to the platform field
+    openDialog(platform);
+  };
+
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {connections.map((conn) => (
-        <Card key={conn.platform}>
+        <Card 
+          key={conn.platform} 
+          className="cursor-pointer hover:bg-accent/50 transition-colors relative"
+          onClick={(e) => handlePlatformClick(conn.platform, e)}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{PLATFORM_CONFIGS[conn.platform].name}</CardTitle>
             <div className="flex items-center space-x-2">
@@ -172,20 +188,50 @@ export function EnhancedPlatformConnectionsWidget() {
           </CardContent>
           <div className="mt-4 flex items-center justify-between space-x-4">
             {conn.syncStatus === 'idle' && (
-              <Button variant="outline" size="sm" onClick={() => handleConnect(conn.platform)}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleConnect(conn.platform);
+                }}
+              >
                 Connect
               </Button>
             )}
             {conn.syncStatus === 'success' && (
-              <Button variant="outline" size="sm" onClick={() => handleDisconnect(conn.platform)}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDisconnect(conn.platform);
+                }}
+              >
                 Disconnect
               </Button>
             )}
             {conn.syncStatus === 'idle' && (
-              <Button variant="outline" size="sm" onClick={() => handleSync(conn.platform)}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSync(conn.platform);
+                }}
+              >
                 Sync
               </Button>
             )}
+          </div>
+          {/* Visual indicator that the card is clickable */}
+          <div className="absolute bottom-2 right-2 text-xs text-muted-foreground flex items-center gap-1">
+            <span>Edit</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
           </div>
         </Card>
       ))}
