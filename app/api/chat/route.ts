@@ -1,26 +1,37 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid';
+import { availableActions } from '@/lib/chat/actions';
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
-const SYSTEM_PROMPT = `You are a helpful AI assistant embedded within the Presense app. 
-You help users manage their business descriptions and content across different platforms.
+const SYSTEM_PROMPT = `You are a powerful agentic AI assistant embedded within the Presense app. You help users manage their business descriptions and content across different platforms.
 
-When suggesting actions or providing content, use these structured commands:
+# Available Tools
+You can use tools to help users accomplish tasks. When appropriate, use the available tools rather than just describing what the user could do.
+`;
 
-1. For opening UI elements:
-***open-description
-
-2. For saving platform-specific content:
-***save-description gmb "YOUR_CONTENT_HERE"
-***save-description fb "YOUR_CONTENT_HERE"
-***save-description ig "YOUR_CONTENT_HERE"
-
-Always explain what you're doing before providing commands.
-When generating new content, ask if the user wants to save it and provide the save command.
-Adapt content length and style based on the platform requirements.`;
+// Convert our action definitions to OpenAI function definitions
+const availableFunctions = availableActions.map(action => ({
+    type: 'function',
+    function: {
+        name: action.id,
+        description: action.description,
+        parameters: {
+            type: 'object',
+            properties: action.parameters.reduce((acc, param) => {
+                acc[param.name] = {
+                    type: param.type,
+                    description: param.description
+                };
+                return acc;
+            }, {}),
+            required: action.parameters.filter(param => param.required).map(param => param.name)
+        }
+    }
+}));
 
 export async function POST(req: Request) {
     try {
@@ -48,18 +59,40 @@ export async function POST(req: Request) {
             messages: apiMessages,
             temperature: 0.7,
             max_tokens: 1500,
+            tools: availableFunctions,
+            tool_choice: 'auto'
         });
 
-        // Parse the response for structured commands
-        const response = completion.choices[0].message.content;
+        const response = completion.choices[0].message;
+        
+        // Extract tool calls from the response
+        const toolCalls = response.tool_calls || [];
+        
+        // Transform tool calls to our action format
+        const actions = toolCalls.map(tool => {
+            try {
+                const functionCall = tool.function;
+                const parameters = JSON.parse(functionCall.arguments);
+                
+                return {
+                    action: functionCall.name,
+                    parameters: parameters || {}
+                };
+            } catch (error) {
+                console.error('Error parsing tool call arguments:', error);
+                return null;
+            }
+        }).filter(Boolean);
         
         return NextResponse.json({
             success: true,
-            response,
-            // Add parsed commands and outputs here for frontend processing
-            commands: parseCommands(response || ''),
-            outputs: parseOutputs(response || ''),
-            // Include image URLs in the response
+            response: response.content || '',
+            actions: actions.map(action => ({
+                actionId: action.action,
+                parameters: action.parameters || {},
+                status: 'pending',
+                messageId: uuidv4()
+            })),
             imageUrls
         });
 
@@ -73,31 +106,4 @@ export async function POST(req: Request) {
             { status: 500 }
         );
     }
-}
-
-function parseCommands(text: string): { name: string }[] {
-    const commandRegex = /\[command name="([^"]+)"\]/g;
-    const commands = [];
-    let match;
-    
-    while ((match = commandRegex.exec(text)) !== null) {
-        commands.push({ name: match[1] });
-    }
-    
-    return commands;
-}
-
-function parseOutputs(text: string): { type: string, content: string }[] {
-    const outputRegex = /\[output type="([^"]+)" content="([^"]+)"\]/g;
-    const outputs = [];
-    let match;
-    
-    while ((match = outputRegex.exec(text)) !== null) {
-        outputs.push({
-            type: match[1],
-            content: match[2]
-        });
-    }
-    
-    return outputs;
 }

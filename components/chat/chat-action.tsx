@@ -18,6 +18,7 @@ export function ChatAction({ command, platform, content }: ChatActionProps) {
   const handleAction = async () => {
     switch (command) {
       case 'open-description':
+        console.log('Opening modal from ChatAction component');
         openModal('business-description')
         break
       case 'save-description':

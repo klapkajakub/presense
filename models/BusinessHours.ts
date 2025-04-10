@@ -26,6 +26,7 @@ export interface IBusinessHours extends Document {
     ranges?: ITimeRange[];
     note?: string;
   }[];
+  userId: mongoose.Schema.Types.ObjectId;
 }
 
 const TimeRangeSchema = new mongoose.Schema({
@@ -53,7 +54,8 @@ const BusinessHoursSchema = new mongoose.Schema<IBusinessHours>({
     isOpen: { type: Boolean, required: true },
     ranges: [TimeRangeSchema],
     note: String
-  }]
+  }],
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, {
   timestamps: true
 });

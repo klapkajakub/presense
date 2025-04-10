@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -20,7 +20,14 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
   const [isOpen, setIsOpen] = useState(false)
   const [isImproving, setIsImproving] = useState(false)
   const [platformVariants, setPlatformVariants] = useState<Record<string, string>>({})
-  const { businessInfo, updateDescription } = useBusiness()
+  const { businessInfo, updateDescription, updatePlatformDescriptions, refetchData } = useBusiness()
+
+  // Load platform descriptions when component mounts or when business info changes
+  useEffect(() => {
+    if (businessInfo.platformDescriptions) {
+      setPlatformVariants(businessInfo.platformDescriptions)
+    }
+  }, [businessInfo.platformDescriptions])
 
   const handleImprove = async () => {
     try {
@@ -52,19 +59,42 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
 
   const handleSave = async () => {
     try {
-      const response = await fetch('/api/business', {
+      // Save main business description
+      const businessResponse = await fetch('/api/business', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify({
           description: businessInfo.description,
-          platformVariants
+          platformVariants: businessInfo.platformVariants
         })
       })
 
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error)
-      toast.success('Business description saved')
+      if (!businessResponse.ok) {
+        const businessData = await businessResponse.json()
+        throw new Error(businessData.error || 'Failed to save business description')
+      }
+
+      // Save platform-specific descriptions
+      const descriptionsResponse = await fetch('/api/business-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          descriptions: platformVariants
+        })
+      })
+
+      if (!descriptionsResponse.ok) {
+        const descriptionsData = await descriptionsResponse.json()
+        throw new Error(descriptionsData.error || 'Failed to save platform descriptions')
+      }
+
+      // Update local state with the saved platform descriptions
+      updatePlatformDescriptions(platformVariants)
+      
+      toast.success('Business descriptions saved')
+      await refetchData() // Refresh all data
       setIsOpen(false)
       onClose?.()
     } catch (error) {

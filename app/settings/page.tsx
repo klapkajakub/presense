@@ -10,6 +10,7 @@ import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRouter } from "next/navigation"
+import { PlatformConnections } from "@/components/settings/platform-connections"
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -68,6 +69,7 @@ export default function SettingsPage() {
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="mb-6">
           <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="connections">Connections</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
         </TabsList>
         
@@ -128,6 +130,10 @@ export default function SettingsPage() {
               </form>
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="connections">
+          <PlatformConnections />
         </TabsContent>
         
         <TabsContent value="account">

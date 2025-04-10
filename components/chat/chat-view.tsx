@@ -79,7 +79,9 @@ export function ChatView() {
               key={index}
               role={message.role}
               content={message.content}
-              messageId={`${message.role}-${index}`}
+              messageId={message.messageId || `${message.role}-${index}`}
+              image={message.image}
+              actions={message.actions}
             />
           ))}
           {/* This div is for visibility purposes only since we're using direct DOM manipulation */}

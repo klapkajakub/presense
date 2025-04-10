@@ -3,6 +3,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Message } from '@/types/chat'
+import { ActionCall } from '@/types/action'
 
 interface ChatStore {
   isOpen: boolean
@@ -14,6 +15,7 @@ interface ChatStore {
   openChat: () => void
   addMessage: (message: Message) => void
   clearMessages: () => void
+  updateActionStatus: (messageId: string, actionIndex: number, status: 'pending' | 'success' | 'error', result?: any, error?: string) => void
 }
 
 export const useChat = create<ChatStore>()(
@@ -33,6 +35,37 @@ export const useChat = create<ChatStore>()(
       })),
       clearMessages: () => set({ 
         messages: [{ role: 'assistant', content: "Hello! How can I help you today?" }]
+      }),
+      updateActionStatus: (messageId: string, actionIndex: number, status: 'pending' | 'success' | 'error', result?: any, error?: string) => set((state) => {
+        // Find the message with the given ID
+        const messageIndex = state.messages.findIndex(msg => msg.messageId === messageId);
+        if (messageIndex === -1 || !state.messages[messageIndex].actions) return state;
+        
+        // Create a deep copy of messages to avoid direct state mutation
+        const newMessages = [...state.messages];
+        const message = {...newMessages[messageIndex]};
+        
+        // Ensure actions is properly initialized
+        const actions = message.actions ? [...message.actions] : [];
+        
+        // Update the action at the given index
+        if (actions[actionIndex]) {
+          actions[actionIndex] = {
+            ...actions[actionIndex],
+            status,
+            ...(result !== undefined && { result }),
+            ...(error !== undefined && { error })
+          };
+          
+          // Log action update for debugging
+          console.log(`Updated action status: ${messageId}, index: ${actionIndex}, status: ${status}`);
+        }
+        
+        // Update the message with the new actions array
+        message.actions = actions;
+        newMessages[messageIndex] = message;
+        
+        return { messages: newMessages };
       })
     }),
     {

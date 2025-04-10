@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { PlatformConnection, PlatformType } from '@/models/PlatformConnection';
 import { BusinessDescription } from '@/models/BusinessDescription';
 import { BusinessHours } from '@/models/BusinessHours';
 import { syncPlatform } from '@/lib/platforms/enhanced-sync';
+import { z } from 'zod';
+
+// Request validation schemas
+const platformSchema = z.enum(['google', 'facebook', 'instagram', 'firmy']);
 
 // Using mock auth for development
 async function verifyAuth() {
@@ -13,16 +17,21 @@ async function verifyAuth() {
   };
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const payload = await verifyAuth();
-    // Mock auth always returns a payload
 
     await connectDB();
     const connections = await PlatformConnection.find({
       userId: payload.userId,
       isActive: true
     }).select('platform lastSyncedAt');
+
+    if (!connections || connections.length === 0) {
+      return NextResponse.json({
+        connections: []
+      });
+    }
 
     return NextResponse.json({
       connections: connections.map(conn => ({
@@ -40,20 +49,29 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const payload = await verifyAuth();
-    const { platform } = await request.json();
+    const body = await request.json();
     
-    if (!platform) {
-      return NextResponse.json({ error: 'Platform is required' }, { status: 400 });
+    // Validate request body
+    const result = platformSchema.safeParse(body.platform);
+    if (!result.success) {
+      return NextResponse.json({ 
+        error: 'Invalid platform',
+        message: 'Platform must be one of: google, facebook, instagram, firmy'
+      }, { status: 400 });
     }
-
+    
+    const platform = result.data;
+    
     await connectDB();
     
     // Fetch business data for syncing
-    const businessDesc = await BusinessDescription.findOne();
-    const businessHours = await BusinessHours.findOne();
+    const [businessDesc, businessHours] = await Promise.all([
+      BusinessDescription.findOne(),
+      BusinessHours.findOne()
+    ]);
     
     if (!businessDesc || !businessHours) {
       return NextResponse.json({ 
@@ -65,7 +83,7 @@ export async function POST(request: Request) {
     // Find the connection
     const connection = await PlatformConnection.findOne({
       userId: payload.userId,
-      platform: platform as PlatformType,
+      platform: platform,
       isActive: true
     });
 
@@ -78,7 +96,7 @@ export async function POST(request: Request) {
 
     // Sync data to the platform
     const syncResult = await syncPlatform(connection, {
-      description: businessDesc.description || '',
+      description: '',  // We don't have a description field, using empty string as fallback
       platformDescriptions: businessDesc.descriptions || {},
       hours: businessHours
     });
@@ -110,21 +128,35 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
   try {
     const payload = await verifyAuth();
-    // Mock auth always returns a payload
-
-    const { platform } = await request.json();
-    if (!platform) {
-      return NextResponse.json({ error: 'Platform is required' }, { status: 400 });
+    const body = await request.json();
+    
+    // Validate request body
+    const result = platformSchema.safeParse(body.platform);
+    if (!result.success) {
+      return NextResponse.json({ 
+        error: 'Invalid platform',
+        message: 'Platform must be one of: google, facebook, instagram, firmy'
+      }, { status: 400 });
     }
-
+    
+    const platform = result.data;
+    
     await connectDB();
-    await PlatformConnection.findOneAndUpdate(
+    
+    const updateResult = await PlatformConnection.findOneAndUpdate(
       { userId: payload.userId, platform },
       { isActive: false }
     );
+    
+    if (!updateResult) {
+      return NextResponse.json({ 
+        error: 'Platform connection not found',
+        message: `No active connection found for ${platform}`
+      }, { status: 404 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

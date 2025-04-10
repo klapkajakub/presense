@@ -12,8 +12,10 @@ import { useBusiness } from "@/components/business/business-context"
 import { parseMessage } from "@/lib/chat/message-parser"
 import type { Components } from 'react-markdown'
 import { useAuth } from '@/lib/contexts/mock-auth-context'
-import { Message } from 'ai'
+import { Message } from '@/types/chat'
 import { UserAvatar } from '@/components/user-avatar'
+import { ActionCall } from '@/types/action'
+import { ChatActionCard } from './chat-action-card'
 
 interface CodeProps extends React.HTMLAttributes<HTMLElement> {
   inline?: boolean
@@ -52,9 +54,10 @@ interface ChatMessageProps {
   messageId?: string;
   highlight?: string;
   image?: string;
+  actions?: ActionCall[];
 }
 
-export function ChatMessage({ role, content, messageId, highlight, image }: ChatMessageProps)  {
+export function ChatMessage({ role, content, messageId, highlight, image, actions }: ChatMessageProps)  {
   const { user } = useAuth()
   const isUser = role === 'user'
   const [copied, setCopied] = useState(false)
@@ -85,7 +88,12 @@ export function ChatMessage({ role, content, messageId, highlight, image }: Chat
         
         switch (cmd.command) {
           case 'open-description':
+            console.log('Opening modal from command parsing');
             openModal('business-description')
+            break
+          case 'open-business-hours':
+            console.log('Opening business hours modal from command parsing');
+            openModal('business-hours')
             break
           case 'save-description':
             if (cmd.platform && cmd.text) {
@@ -198,6 +206,89 @@ export function ChatMessage({ role, content, messageId, highlight, image }: Chat
             {`${cmd.command}${cmd.platform ? ` ${cmd.platform}` : ''}${cmd.text ? ` "${cmd.text}"` : ''}`}
           </div>
         ))}
+        
+        {/* Render action cards */}
+        {actions && actions.length > 0 && actions.map((action, index) => {
+          // Create a state update function for this specific action
+          const updateActionStatus = async (actionId: string, parameters: Record<string, any>) => {
+            try {
+              // Call the action execution API
+              const response = await fetch('/api/actions/execute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ actionId, parameters })
+              });
+              
+              const data = await response.json();
+              
+              if (!response.ok) {
+                throw new Error(data.error || 'Failed to execute action');
+              }
+              
+              console.log('Action execution response:', data);
+              
+              // Handle specific actions based on the result
+              if (data.success && data.result) {
+                const result = data.result;
+                
+                // Handle modal opening actions
+                if (result.action === 'open-modal' && result.modalType) {
+                  console.log(`Opening modal: ${result.modalType}`);
+                  openModal(result.modalType);
+                }
+                
+                // Handle save description action
+                if (result.action === 'save-description' && parameters.content) {
+                  await updateDescription(parameters.content);
+                }
+              }
+              
+              // Update the action in the UI
+              action.status = 'success';
+              action.result = data.result;
+              
+              // Force a re-render using a custom event
+              const event = new CustomEvent('action-updated', { 
+                detail: { 
+                  messageId, 
+                  actionIndex: index, 
+                  status: 'success', 
+                  result: data.result 
+                } 
+              });
+              window.dispatchEvent(event);
+              
+              return data.result;
+            } catch (error) {
+              console.error('Error executing action:', error);
+              
+              // Update the action status to error
+              action.status = 'error';
+              action.error = error instanceof Error ? error.message : 'Unknown error';
+              
+              // Force a re-render using a custom event
+              const event = new CustomEvent('action-updated', { 
+                detail: { 
+                  messageId, 
+                  actionIndex: index, 
+                  status: 'error', 
+                  error: error instanceof Error ? error.message : 'Unknown error' 
+                } 
+              });
+              window.dispatchEvent(event);
+              
+              throw error;
+            }
+          };
+          
+          return (
+            <ChatActionCard 
+              key={`${messageId}-action-${index}`} 
+              action={action} 
+              onExecute={updateActionStatus}
+            />
+          );
+        })}
 
         <div className="flex gap-1 opacity-100 transition-opacity">
           <Button variant="ghost" size="icon" onClick={handleCopy}>

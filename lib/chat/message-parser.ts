@@ -16,7 +16,7 @@ export function parseMessage(content: string): ParsedMessage {
   const mainContent = parts[0]
   const commands = parts.slice(1)
     .map(cmd => {
-      const match = cmd.match(/^(save-description|open-description)(?:\s+(\w+)\s+"([^"]+)")?/)
+      const match = cmd.match(/^(save-description|open-description|open-business-hours)(?:\s+(\w+)\s+"([^"]+)")?/)
       if (!match) return null;
       return {
         command: match[1],

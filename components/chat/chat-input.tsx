@@ -1,4 +1,4 @@
-\"use client"
+"use client"
 
 import { useState, useRef } from "react"
 import { useChat } from "@/lib/hooks/use-chat"
@@ -19,6 +19,7 @@ import {
   X
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Message } from "@/types/chat"
 
 export function ChatInput() {
   const { addMessage } = useChat()
@@ -59,26 +60,45 @@ export function ChatInput() {
         }
       }
       
-      // Add message to chat
-      addMessage({ role: 'user', content: input, image: imageUrl })
+      // Add user message to chat UI
+      const userMessage: Message = { 
+        role: 'user' as const, 
+        content: input, 
+        image: imageUrl 
+      };
+      addMessage(userMessage);
       
       // Clear input and image
       setInput('')
       setImageFile(null)
       setImagePreview(null)
 
-      // Send message to API
+      // Get the current chat history
+      const { messages } = useChat.getState();
+      
+      // Send message to API with full conversation history
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          messages: [{ role: 'user', content: input, image: imageUrl }] 
+          messages: messages
         })
       })
 
       const data = await response.json()
       if (data.success) {
-        addMessage({ role: 'assistant', content: data.response })
+        // Generate a unique message ID for the assistant's message
+        const messageId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+        
+        console.log('Received actions from API:', data.actions)
+        
+        // Add the assistant's message with any actions
+        addMessage({ 
+          role: 'assistant', 
+          content: data.response,
+          messageId,
+          actions: data.actions
+        })
       }
     } catch (error) {
       console.error('Chat error:', error)

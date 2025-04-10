@@ -1,58 +1,85 @@
 import { NextResponse } from 'next/server'
 import { NextRequest } from 'next/server'
-import { cookies } from 'next/headers'
 
-// Export the middleware config
+// Auth cookie name
+const AUTH_COOKIE = 'presense_auth';
+
+// Public routes that don't require authentication
+const publicRoutes = [
+  '/',
+  '/login', 
+  '/signup',
+  '/api/auth/login', 
+  '/api/auth/signup',
+];
+
+// Export the middleware config with optimized matcher
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public (public files)
-     */
+    // Match all request paths except static assets and public files
     '/((?!_next/static|_next/image|favicon.ico|public).*)',
   ],
 }
 
-// Helper function to create a safe URL
-function safeUrl(baseUrl: string, path: string): URL {
+// Check if a path should be public
+function isPublicPath(path: string): boolean {
+  return publicRoutes.some(publicPath => 
+    path === publicPath || 
+    path.startsWith(`${publicPath}/`)
+  );
+}
+
+// Simple function to get user from cookie
+function getUserFromCookie(request: NextRequest) {
   try {
-    const url = new URL(path, baseUrl)
-    return url
-  } catch (e) {
-    // Fallback to a default URL if there's an error
-    return new URL('http://localhost:3000')
+    const authCookie = request.cookies.get(AUTH_COOKIE);
+    
+    if (!authCookie) {
+      return null;
+    }
+    
+    const sessionData = JSON.parse(
+      Buffer.from(authCookie.value, 'base64').toString()
+    );
+    
+    // Check if token is expired
+    if (sessionData.exp < Date.now()) {
+      return null;
+    }
+    
+    return {
+      userId: sessionData.userId,
+      email: sessionData.email
+    };
+  } catch (error) {
+    console.error('Error extracting user from cookie:', error);
+    return null;
   }
 }
 
-// This function will run before each request - using a cookie-based approach instead of NextAuth in Edge
 export async function middleware(request: NextRequest) {
-  // Early return if request is undefined
+  const { pathname } = request.nextUrl;
+  
+  // Early return if request is invalid
   if (!request?.nextUrl) {
-    return NextResponse.next()
-  }
-
-  const { pathname } = request.nextUrl
-  
-  // Make sure pathname is defined
-  if (!pathname) {
-    return NextResponse.next()
+    return NextResponse.next();
   }
   
-  // All routes are now public since we're using mock auth
-  const isPublicRoute = true
-  
-  if (isPublicRoute) {
-    return NextResponse.next()
+  // Allow public routes
+  if (isPublicPath(pathname)) {
+    return NextResponse.next();
   }
   
-  // Check for session token in cookies instead of using NextAuth directly
-  const sessionToken = request.cookies.get('next-auth.session-token')?.value ||
-                      request.cookies.get('__Secure-next-auth.session-token')?.value
+  // Check for authentication
+  const user = getUserFromCookie(request);
   
-  // No need to redirect to login page since we're using mock auth
-  // and all routes are public now
-  return NextResponse.next()
+  // If unauthenticated and accessing protected route, redirect to login
+  if (!user) {
+    const url = new URL('/login', request.url);
+    url.searchParams.set('from', pathname);
+    return NextResponse.redirect(url);
+  }
+  
+  // User is authenticated, proceed
+  return NextResponse.next();
 }

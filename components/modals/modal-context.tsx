@@ -3,8 +3,9 @@
 import { createContext, useContext, useState } from "react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { BusinessDescriptionModal } from "@/components/business/business-description-modal"
+import { BusinessHoursModal } from "@/components/business/business-hours-modal"
 
-export type ModalType = "business-description"
+export type ModalType = "business-description" | "business-hours"
 
 interface ModalContextType {
   openModal: (type: ModalType) => void
@@ -18,13 +19,17 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
   const [modalType, setModalType] = useState<ModalType | null>(null)
 
   const openModal = (type: ModalType) => {
-    setModalType(type)
-    setIsOpen(true)
+    console.log('Modal opening requested:', type);
+    setModalType(type);
+    setIsOpen(true);
+    console.log('Modal state updated - type:', type, 'isOpen:', true);
   }
 
   const closeModal = () => {
-    setIsOpen(false)
-    setModalType(null)
+    console.log('Modal closing requested');
+    setIsOpen(false);
+    setModalType(null);
+    console.log('Modal state updated - isOpen:', false, 'type: null');
   }
 
   return (
@@ -33,6 +38,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent>
           {modalType === "business-description" && <BusinessDescriptionModal />}
+          {modalType === "business-hours" && <BusinessHoursModal />}
         </DialogContent>
       </Dialog>
     </ModalContext.Provider>

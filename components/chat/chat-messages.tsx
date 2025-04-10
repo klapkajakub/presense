@@ -21,11 +21,12 @@ export function ChatMessages({ messages, highlight }: ChatMessagesProps) {
       {messages.map((message, index) => (
         <ChatMessage
           key={`${message.role}-${index}`}
-          messageId={`${message.role}-${index}`}
+          messageId={message.messageId || `${message.role}-${index}`}
           role={message.role}
           content={message.content}
           highlight={highlight}
           image={message.image}
+          actions={message.actions}
         />
       ))}
       <div ref={bottomRef} />

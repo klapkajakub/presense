@@ -5,6 +5,7 @@ import "./globals.css"
 import { cn } from "@/lib/utils"
 import { ClientLayout } from "@/components/layout/client-layout"
 import { Providers } from "@/components/providers"
+import { Database } from "@/components/Database"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,6 +42,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background font-sans">
         <Providers>
+          <Database />
           <ClientLayout>
             {children}
           </ClientLayout>
