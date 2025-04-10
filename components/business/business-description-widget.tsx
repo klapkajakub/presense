@@ -20,14 +20,24 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
   const [isOpen, setIsOpen] = useState(false)
   const [isImproving, setIsImproving] = useState(false)
   const [platformVariants, setPlatformVariants] = useState<Record<string, string>>({})
-  const { businessInfo, updateDescription, updatePlatformDescriptions, refetchData } = useBusiness()
+  const { businessInfo, updateDescription } = useBusiness()
 
-  // Load platform descriptions when component mounts or when business info changes
+  // Add event listener to open dialog from external components
   useEffect(() => {
-    if (businessInfo.platformDescriptions) {
-      setPlatformVariants(businessInfo.platformDescriptions)
+    const handleOpenDialog = () => setIsOpen(true);
+    document.addEventListener('open-business-description', handleOpenDialog);
+    
+    return () => {
+      document.removeEventListener('open-business-description', handleOpenDialog);
+    };
+  }, []);
+
+  // Initialize platform variants when dialog opens
+  useEffect(() => {
+    if (isOpen && businessInfo.platformDescriptions) {
+      setPlatformVariants(businessInfo.platformDescriptions || {})
     }
-  }, [businessInfo.platformDescriptions])
+  }, [isOpen, businessInfo.platformDescriptions]);
 
   const handleImprove = async () => {
     try {
@@ -47,11 +57,15 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Failed to improve text')
 
-      updateDescription(data.improvedText)
+      // Handle both response field names for better compatibility
+      const improvedText = data.improvedText || data.text
+      if (!improvedText) throw new Error('No improved text returned')
+      
+      updateDescription(improvedText)
       toast.success('Business description improved')
     } catch (error) {
       console.error('Error improving text:', error)
-      toast.error('Failed to improve description')
+      toast.error(error instanceof Error ? error.message : 'Failed to improve description')
     } finally {
       setIsImproving(false)
     }
@@ -66,7 +80,7 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
         credentials: 'same-origin',
         body: JSON.stringify({
           description: businessInfo.description,
-          platformVariants: businessInfo.platformVariants
+          platformDescriptions: platformVariants
         })
       })
 
@@ -90,11 +104,8 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
         throw new Error(descriptionsData.error || 'Failed to save platform descriptions')
       }
 
-      // Update local state with the saved platform descriptions
-      updatePlatformDescriptions(platformVariants)
-      
+      // Update local state
       toast.success('Business descriptions saved')
-      await refetchData() // Refresh all data
       setIsOpen(false)
       onClose?.()
     } catch (error) {
@@ -121,16 +132,30 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Failed to generate platform variant')
 
+      // Handle both response field names for better compatibility
+      const improvedText = data.improvedText || data.text
+      if (!improvedText) throw new Error('No improved text returned')
+      
+      // Update local state
       setPlatformVariants(prev => ({
         ...prev,
-        [platform]: data.improvedText
+        [platform]: improvedText
       }))
+      
       toast.success(`${PLATFORM_CONFIGS[platform].name} variant generated`)
     } catch (error) {
       console.error('Error generating platform variant:', error)
       toast.error('Failed to generate platform variant')
     }
   }
+
+  // Update platform descriptions whenever they change in the editor
+  const handlePlatformVariantChange = (platform: string, value: string) => {
+    setPlatformVariants(prev => ({
+      ...prev,
+      [platform]: value
+    }));
+  };
 
   const preview = businessInfo.description.length > 150 
     ? businessInfo.description.slice(0, 150) + '...'
@@ -191,7 +216,12 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
                   onClick={handleImprove}
                   disabled={isImproving || !businessInfo.description}
                 >
-                  {isImproving ? 'Improving...' : (
+                  {isImproving ? (
+                    <>
+                      <Wand2 className="mr-2 h-4 w-4 animate-spin" />
+                      Improving...
+                    </>
+                  ) : (
                     <>
                       <Wand2 className="mr-2 h-4 w-4" />
                       Improve
@@ -220,10 +250,7 @@ export function BusinessDescriptionWidget({ onClose }: BusinessDescriptionWidget
                   </div>
                   <Textarea
                     value={platformVariants[platform] || ''}
-                    onChange={(e) => setPlatformVariants(prev => ({
-                      ...prev,
-                      [platform]: e.target.value
-                    }))}
+                    onChange={(e) => handlePlatformVariantChange(platform, e.target.value)}
                     placeholder={`${config.name} description (max ${config.maxLength} characters)`}
                     className="min-h-[100px]"
                   />

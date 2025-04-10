@@ -1,10 +1,9 @@
 "use client"
 
-import { BusinessProvider } from "@/components/business/business-context"
 import { BusinessDescriptionWidget } from "@/components/business/business-description-widget"
 import { BusinessHoursWidget } from "@/components/business/business-hours-widget"
 import { PlatformConnectionsWidget } from "@/components/business/platform-connections-widget"
-import BusinessDebug from "@/app/components/BusinessDebug"
+import { BusinessProvider } from "@/components/business/business-context"
 
 export default function HomePage() {
   return (
@@ -18,7 +17,6 @@ export default function HomePage() {
             Manage your business information and platform-specific content
           </p>
         </div>
-        <BusinessDebug />
         <div className="grid gap-6 md:grid-cols-2">
           <BusinessDescriptionWidget />
           <BusinessHoursWidget />
