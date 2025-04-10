@@ -274,7 +274,7 @@ export function FAQConfiguratorWidget({ onClose }: FAQConfiguratorWidgetProps) {
   )
 }
 
-// Helper function to get color class based on score
+// Function to get color class based on score
 function getScoreColorClass(score: number): string {
   if (score >= 80) return 'bg-emerald-400'
   if (score >= 60) return 'bg-green-300'

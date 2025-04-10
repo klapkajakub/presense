@@ -107,13 +107,13 @@ export function InternetPresenceScoreWidget({ onClose }: InternetPresenceScoreWi
     return Math.min(30, lengthScore + qualityScore)
   }
 
-  const calculatePlatformScore = (platformDescriptions: Record<string, string>) => {
+  const calculatePlatformScore = (platformDescriptions: Record<string, string> | undefined) => {
     const platforms = Object.keys(PLATFORM_CONFIGS)
     let score = 0
     const missingPlatforms: string[] = []
     
     platforms.forEach(platform => {
-      const description = platformDescriptions[platform] || ''
+      const description = platformDescriptions?.[platform] || ''
       const config = PLATFORM_CONFIGS[platform]
       
       if (!description || description.trim() === '') {

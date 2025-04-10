@@ -13,6 +13,9 @@ interface BusinessContextType {
   businessInfo: BusinessInfo;
   updateDescription: (description: string) => void;
   updateHours: (hours: IBusinessHours) => void;
+  updatePlatformDescription: (platform: string, description: string) => void;
+  updatePlatformDescriptions: (descriptions: Record<string, string>) => void;
+  fetchBusinessData: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -23,7 +26,8 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo>({
     description: "",
-    hours: null
+    hours: null,
+    platformDescriptions: {}
   });
   
   const fetchBusinessData = useCallback(async () => {
@@ -60,6 +64,11 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Initial data fetch
+  useEffect(() => {
+    fetchBusinessData();
+  }, [fetchBusinessData]);
+
   const updateDescription = useCallback((description: string) => {
     setBusinessInfo(prev => ({ ...prev, description }));
   }, []);
@@ -68,11 +77,31 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     setBusinessInfo(prev => ({ ...prev, hours }));
   }, []);
 
+  const updatePlatformDescription = useCallback((platform: string, description: string) => {
+    setBusinessInfo(prev => ({
+      ...prev,
+      platformDescriptions: {
+        ...prev.platformDescriptions,
+        [platform]: description
+      }
+    }));
+  }, []);
+
+  const updatePlatformDescriptions = useCallback((descriptions: Record<string, string>) => {
+    setBusinessInfo(prev => ({
+      ...prev,
+      platformDescriptions: descriptions
+    }));
+  }, []);
+
   return (
     <BusinessContext.Provider value={{
       businessInfo,
       updateDescription,
       updateHours,
+      updatePlatformDescription,
+      updatePlatformDescriptions,
+      fetchBusinessData,
       isLoading
     }}>
       {children}
